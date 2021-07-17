@@ -1,5 +1,7 @@
 package intermediate
 
+import "fmt"
+
 type Kind uint8
 
 const (
@@ -26,7 +28,7 @@ const (
 	Interface
 )
 
-func (k Kind) String() string {
+func (k Kind) Type() string {
 	switch k {
 	case Bool:
 		return "bool"
@@ -106,4 +108,75 @@ func (k Kind) Base() int16 {
 	default:
 		return 0
 	}
+}
+
+type Typ interface {
+	Kind() Kind
+	Type() string
+	Collection() bool
+}
+
+type TPrimitive struct {
+	TKind Kind
+}
+
+func (t TPrimitive) Kind() Kind {
+	return t.TKind
+}
+
+func (t TPrimitive) Type() string {
+	return t.TKind.Type()
+}
+
+func (TPrimitive) Collection() bool {
+	return false
+}
+
+type TArray struct {
+	ETyp Typ
+	Size int64
+}
+
+func (TArray) Kind() Kind {
+	return Array
+}
+
+func (t TArray) Type() string {
+	return fmt.Sprintf("[%d]%s", t.Size, t.ETyp.Type())
+}
+
+func (TArray) Collection() bool {
+	return true
+}
+
+type TSlice struct {
+	EKind Kind
+}
+
+func (TSlice) Kind() Kind {
+	return Slice
+}
+
+func (t TSlice) Type() string {
+	return fmt.Sprintf("[]%s", t.EKind.Type())
+}
+
+func (TSlice) Collection() bool {
+	return true
+}
+
+type TMap struct {
+	KTyp, VTyp Typ
+}
+
+func (TMap) Kind() Kind {
+	return Slice
+}
+
+func (t TMap) Type() string {
+	return fmt.Sprintf("map[%s]%s", t.KTyp.Type(), t.VTyp.Type())
+}
+
+func (TMap) Collection() bool {
+	return true
 }

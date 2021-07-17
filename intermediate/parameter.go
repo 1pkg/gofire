@@ -7,11 +7,11 @@ type Parameter interface {
 type Argument struct {
 	Index uint64
 	Doc   string
-	Kind  Kind
+	Type  Typ
 }
 
-func (a Argument) Accept(s Visitor) error {
-	return s.VisitArgument(a)
+func (a Argument) Accept(v Visitor) error {
+	return v.VisitArgument(a)
 }
 
 type Flag struct {
@@ -23,11 +23,11 @@ type Flag struct {
 	Deprecated bool
 	Hidden     bool
 	Default    string
-	Kind       Kind
+	Type       Typ
 }
 
-func (f Flag) Accept(s Visitor) error {
-	return s.VisitFlag(f)
+func (f Flag) Accept(v Visitor) error {
+	return v.VisitFlag(f)
 }
 
 type Group struct {
@@ -36,13 +36,13 @@ type Group struct {
 	Parameters map[string]Parameter
 }
 
-func (g Group) Accept(s Visitor) error {
-	cur := s.VisitGroup(g)
+func (g Group) Accept(v Visitor) error {
+	cur := v.VisitGroup(g)
 	if err := cur.Start(); err != nil {
 		return err
 	}
 	for _, p := range g.Parameters {
-		if err := p.Accept(s); err != nil {
+		if err := p.Accept(v); err != nil {
 			return err
 		}
 	}

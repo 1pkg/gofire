@@ -6,7 +6,9 @@ type Cursor interface {
 }
 
 type Visitor interface {
+	Dump() error
 	VisitArgument(Argument) error
 	VisitFlag(Flag) error
 	VisitGroup(Group) Cursor
+	VisitCommand(Command) Cursor
 }
