@@ -1,31 +1,33 @@
 package generators
 
 import (
-	"bytes"
 	"fmt"
 	"io"
-	"strings"
+	"io/ioutil"
 )
 
 type buffer struct {
-	w io.ReadWriter
+	rw io.ReadWriter
 }
 
-func (b buffer) Append(format string, a ...interface{}) error {
-	format = strings.Trim(format, " ")
-	format = strings.Trim(format, "\t")
-	format = strings.Trim(format, "\n")
+type byter interface {
+	Bytes() ([]byte, error)
+}
+
+func (b buffer) fprintf(format string, a ...interface{}) error {
 	format += "\n"
-	if _, err := fmt.Fprintf(b.w, format, a...); err != nil {
+	if _, err := fmt.Fprintf(b.rw, format, a...); err != nil {
+		return err
+	}
+	if _, err := b.rw.Write([]byte("\n")); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (b buffer) Bytes() ([]byte, error) {
-	var buf bytes.Buffer
-	if _, err := buf.ReadFrom(b.w); err != nil {
-		return nil, err
+func (b buffer) bytes() ([]byte, error) {
+	if bt, ok := b.rw.(byter); ok {
+		return bt.Bytes()
 	}
-	return buf.Bytes(), nil
+	return ioutil.ReadAll(b.rw)
 }

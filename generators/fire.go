@@ -2,7 +2,6 @@ package generators
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"go/format"
 	"io"
@@ -12,27 +11,23 @@ import (
 
 type fire struct {
 	buffer
-	idx uint64
 }
 
 func NewFire() internal.Generator {
-	return &fire{
-		buffer: buffer{w: &bytes.Buffer{}},
-	}
-}
-
-func (gen *fire) VisitArgument(a internal.Argument) error {
-	name := fmt.Sprintf("a%d", a.Index)
-	return gen.passign(name, name, a.Type)
-}
-
-func (gen *fire) VisitFlag(f internal.Flag, g *internal.Group) error {
-	name := fmt.Sprintf("f%s", f.Short)
-	return gen.passign(name, name, f.Type)
+	gen := &fire{}
+	gen.rw = &bytes.Buffer{}
+	return &fire{}
 }
 
 func (gen *fire) Generate(c internal.Command, w io.Writer) error {
-	if err := gen.Append(
+	if err := c.Accept(gen); err != nil {
+		return nil
+	}
+	b, err := gen.bytes()
+	if err != nil {
+		return err
+	}
+	src := fmt.Sprintf(
 		`
 			package %s
 
@@ -43,23 +38,13 @@ func (gen *fire) Generate(c internal.Command, w io.Writer) error {
 			)
 			
 			func Command(ctx context.Context) (err error) {
-				paramenters := make(map[string]string)
+				%s
+			}
 		`,
 		c.Pckg,
-	); err != nil {
-		return err
-	}
-	if err := c.Accept(gen); err != nil {
-		return nil
-	}
-	if err := gen.Append("}"); err != nil {
-		return err
-	}
-	b, err := gen.Bytes()
-	if err != nil {
-		return err
-	}
-	b, err = format.Source(b)
+		string(b),
+	)
+	b, err = format.Source([]byte(src))
 	if err != nil {
 		return err
 	}
@@ -69,164 +54,229 @@ func (gen *fire) Generate(c internal.Command, w io.Writer) error {
 	return nil
 }
 
-func (gen *fire) vdef(name string, t internal.Typ) error {
-	return gen.Append("var %s %s", name, t.Type())
+func (gen *fire) VisitArgument(a internal.Argument) error {
+	name := fmt.Sprintf("a%d", a.Index)
+	return gen.typ(name, name, a.Type)
 }
 
-func (gen *fire) vtmp(t internal.Typ) (string, error) {
-	gen.idx++
-	name := fmt.Sprintf("v%d", gen.idx)
-	if err := gen.vdef(name, t); err != nil {
-		return "", err
-	}
-	return name, nil
+func (gen *fire) VisitFlag(f internal.Flag, g *internal.Group) error {
+	name := fmt.Sprintf("f%s", f.Short)
+	return gen.typ(name, name, f.Type)
 }
 
-func (gen *fire) passign(name, key string, t internal.Typ) error {
-	if err := gen.vdef(name, t); err != nil {
-		return err
-	}
+func (gen *fire) typ(name, key string, t internal.Typ) error {
 	k := t.Kind()
 	switch k {
 	case internal.Bool:
-		v, err := gen.vtmp(internal.TPrimitive{TKind: internal.Bool})
-		if err != nil {
-			return err
-		}
-		if err := gen.Append(
-			`
-				%s, err = strconv.ParseBool(parameters[%s], 10, %d)
-				if err != nil {
-					return err
-				}
-				%s = %s(%s)
-			`,
-			v,
-			key,
-			k.Base(),
-			name,
-			k.Type(),
-			v,
-		); err != nil {
-			return err
-		}
+		fallthrough
 	case internal.Int, internal.Int8, internal.Int16, internal.Int32, internal.Int64:
-		v, err := gen.vtmp(internal.TPrimitive{TKind: internal.Int64})
-		if err != nil {
-			return err
-		}
-		if err := gen.Append(
-			`
-				%s, err = strconv.ParseInt(parameters[%s], 10, %d)
-				if err != nil {
-					return err
-				}
-				%s = %s(%s)
-			`,
-			v,
-			key,
-			k.Base(),
-			name,
-			k.Type(),
-			v,
-		); err != nil {
-			return err
-		}
+		fallthrough
 	case internal.Uint, internal.Uint8, internal.Uint16, internal.Uint32, internal.Uint64:
-		v, err := gen.vtmp(internal.TPrimitive{TKind: internal.Uint64})
-		if err != nil {
-			return err
-		}
-		if err := gen.Append(
-			`
-				%s, err = strconv.ParseUint(parameters[%s], 10, %d)
-				if err != nil {
-					return err
-				}
-				%s = %s(%s)
-			`,
-			v,
-			key,
-			k.Base(),
-			name,
-			k.Type(),
-			v,
-		); err != nil {
-			return err
-		}
+		fallthrough
 	case internal.Float32, internal.Float64:
-		v, err := gen.vtmp(internal.TPrimitive{TKind: internal.Float64})
-		if err != nil {
-			return err
-		}
-		if err := gen.Append(
-			`
-				%s, err = strconv.ParseFloat(parameters[%s], %d)
-				if err != nil {
-					return err
-				}
-				%s = %s(%s)
-			`,
-			v,
-			key,
-			k.Base(),
-			name,
-			k.Type(),
-			v,
-		); err != nil {
-			return err
-		}
+		fallthrough
 	case internal.Complex64, internal.Complex128:
-		v, err := gen.vtmp(internal.TPrimitive{TKind: internal.Complex128})
-		if err != nil {
-			return err
-		}
-		if err := gen.Append(
-			`
-				%s, err = strconv.ParseComplex(parameters[%s], %d)
-				if err != nil {
-					return err
+		return gen.tprimitive(name, key, t.(internal.TPrimitive))
+	case internal.Array:
+		return gen.tarray(name, key, t.(internal.TArray))
+	case internal.Slice:
+		return gen.tslice(name, key, t.(internal.TSlice))
+	case internal.Map:
+		return gen.tmap(name, key, t.(internal.TMap))
+	default:
+		return fmt.Errorf("unknown type %q can't parsed", t.Type())
+	}
+}
+
+func (gen *fire) tarray(name, key string, t internal.TArray) error {
+	if err := gen.fprintf(
+		`
+			var %s %s
+			for i := 0; i < %d; i++ {
+		`,
+		name,
+		t.Type(),
+		t.Size,
+	); err != nil {
+		return err
+	}
+	if err := gen.typ(
+		fmt.Sprintf("i%s", name),
+		fmt.Sprintf(`fmt.Sprintf("%s_%%d", i)`, name),
+		t.ETyp,
+	); err != nil {
+		return err
+	}
+	return gen.fprintf(
+		`
+				%s[i] = i%s
+			}
+		`,
+		name,
+		name,
+	)
+}
+
+func (gen *fire) tslice(name, key string, t internal.TSlice) error {
+	if err := gen.fprintf(
+		`
+			var %s %s
+			{
+				var i int64
+				for key := range params {
+					if !strings.HasPrefix(key, %s) {
+						continue
+					}
+					i++
+		`,
+		name,
+		t.Type(),
+		key,
+	); err != nil {
+		return err
+	}
+	if err := gen.typ(
+		fmt.Sprintf("i%s", name),
+		fmt.Sprintf(`fmt.Sprintf("%s_%%d", i)`, name),
+		t.ETyp,
+	); err != nil {
+		return err
+	}
+	return gen.fprintf(
+		`
+					%s[i] = i%s
 				}
-				%s = %s(%s)
+			}
+		`,
+		name,
+		name,
+	)
+}
+
+func (gen *fire) tmap(name, key string, t internal.TMap) error {
+	return nil
+}
+
+func (gen *fire) tprimitive(name, key string, t internal.TPrimitive) error {
+	k := t.Kind()
+	switch k {
+	case internal.Bool:
+		return gen.fprintf(
+			`
+				var %s %s
+				if p, ok := params[fmt.Sprintf("%%q", %s")]; ok {
+					t%s, err := strconv.ParseBool(p)
+					if err != nil {
+						return err
+					}
+					%s = t%s
+				}
 			`,
-			v,
+			name,
+			t.Type(),
 			key,
+			name,
+			name,
+			name,
+		)
+	case internal.Int, internal.Int8, internal.Int16, internal.Int32, internal.Int64:
+		return gen.fprintf(
+			`
+				var %s %s
+				if p, ok := params[fmt.Sprintf("%%q", %s")]; ok {
+					t%s, err := strconv.ParseInt(p, 10, %d)
+					if err != nil {
+						return err
+					}
+					%s = %s(t%s)
+				}
+			`,
+			name,
+			t.Type(),
+			key,
+			name,
 			k.Base(),
 			name,
 			k.Type(),
-			v,
-		); err != nil {
-			return err
-		}
-	case internal.String, internal.Interface:
-		if err := gen.Append(`%s = parameters[%s]`, name, key); err != nil {
-			return err
-		}
-	case internal.Array:
-		tarray := t.(internal.TArray)
-		iname := fmt.Sprintf(`fmt.Sprintf("%s%%d", i)`, name)
-		v, err := gen.vtmp(tarray.ETyp)
-		if err != nil {
-			return err
-		}
-		if err := gen.Append(`for i := 0; i < %d; i++ {`, tarray.Size); err != nil {
-			return err
-		}
-		if err := gen.passign(v, iname, tarray.ETyp); err != nil {
-			return err
-		}
-		if err := gen.Append(
+			name,
+		)
+	case internal.Uint, internal.Uint8, internal.Uint16, internal.Uint32, internal.Uint64:
+		return gen.fprintf(
 			`
-					%s[i] = %s
+				var %s %s
+				if p, ok := params[fmt.Sprintf("%%q", %s")]; ok {
+					t%s, err := strconv.ParseUint(p, 10, %d)
+					if err != nil {
+						return err
+					}
+					%s = %s(t%s)
 				}
 			`,
 			name,
-			v,
-		); err != nil {
-			return err
-		}
+			t.Type(),
+			key,
+			name,
+			k.Base(),
+			name,
+			k.Type(),
+			name,
+		)
+	case internal.Float32, internal.Float64:
+		return gen.fprintf(
+			`
+				var %s %s
+				if p, ok := params[fmt.Sprintf("%%q", %s")]; ok {
+					t%s, err := strconv.ParseFloat(p, %d)
+					if err != nil {
+						return err
+					}
+					%s = %s(t%s)
+				}
+			`,
+			name,
+			t.Type(),
+			key,
+			name,
+			k.Base(),
+			name,
+			k.Type(),
+			name,
+		)
+	case internal.Complex64, internal.Complex128:
+		return gen.fprintf(
+			`
+				var %s %s
+				if p, ok := params[fmt.Sprintf("%%q", %s")]; ok {
+					t%s, err := strconv.ParseComplex(p, %d)
+					if err != nil {
+						return err
+					}
+					%s = %s(t%s)
+				}
+			`,
+			name,
+			t.Type(),
+			key,
+			name,
+			k.Base(),
+			name,
+			k.Type(),
+			name,
+		)
+	case internal.String, internal.Interface:
+		return gen.fprintf(
+			`
+				var %s %s
+				if p, ok := params[fmt.Sprintf("%%q", %s")]; ok {
+					%s = p
+				}
+			`,
+			name,
+			t.Type(),
+			key,
+			name,
+		)
 	default:
-		return errors.New("")
+		return fmt.Errorf("type %q can't parsed as primitive type", t.Type())
 	}
-	return nil
 }

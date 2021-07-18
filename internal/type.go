@@ -22,10 +22,10 @@ const (
 	Complex64
 	Complex128
 	String
+	Interface
 	Array
 	Slice
 	Map
-	Interface
 )
 
 func (k Kind) Type() string {
@@ -62,14 +62,14 @@ func (k Kind) Type() string {
 		return "complex128"
 	case String:
 		return "string"
+	case Interface:
+		return "interface"
 	case Array:
 		return "array"
 	case Slice:
 		return "slice"
 	case Map:
 		return "map"
-	case Interface:
-		return "interface"
 	default:
 		return "invalid"
 	}
@@ -150,7 +150,7 @@ func (TArray) Collection() bool {
 }
 
 type TSlice struct {
-	EKind Kind
+	ETyp Typ
 }
 
 func (TSlice) Kind() Kind {
@@ -158,7 +158,7 @@ func (TSlice) Kind() Kind {
 }
 
 func (t TSlice) Type() string {
-	return fmt.Sprintf("[]%s", t.EKind.Type())
+	return fmt.Sprintf("[]%s", t.ETyp.Type())
 }
 
 func (TSlice) Collection() bool {
