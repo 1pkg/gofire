@@ -1,6 +1,7 @@
 package generators
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"strings"
@@ -21,6 +22,10 @@ func (b buffer) Append(format string, a ...interface{}) error {
 	return nil
 }
 
-func (b buffer) Read(p []byte) (n int, err error) {
-	return b.w.Read(p)
+func (b buffer) Bytes() ([]byte, error) {
+	var buf bytes.Buffer
+	if _, err := buf.ReadFrom(b.w); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }

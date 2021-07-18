@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"go/format"
 	"os"
 
 	"github.com/xyz/playground/internal"
@@ -44,11 +45,13 @@ func (gen *fire) VisitCommandStart(c internal.Command) error {
 			package %s
 
 			import(
+				"context"
 				"fmt"
 				"strconv"
 			)
 			
-			func main() {
+			func Command(ctx context.Context) (err error) {
+				paramenters := make(map[string]string)
 		`,
 		c.Pckg,
 	)
@@ -58,8 +61,18 @@ func (gen *fire) VisitCommandEnd(c internal.Command) error {
 	if err := gen.Append("}"); err != nil {
 		return err
 	}
-	_, err := os.Stdout.ReadFrom(gen.w)
-	return err
+	b, err := gen.Bytes()
+	if err != nil {
+		return err
+	}
+	b, err = format.Source(b)
+	if err != nil {
+		return err
+	}
+	if _, err := os.Stdout.Write(b); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (gen *fire) vdef(name string, t internal.Typ) error {
@@ -82,130 +95,130 @@ func (gen *fire) passign(name, key string, t internal.Typ) error {
 	k := t.Kind()
 	switch k {
 	case internal.Bool:
-		tmpv, err := gen.vtmp(t)
+		v, err := gen.vtmp(internal.TPrimitive{TKind: internal.Bool})
 		if err != nil {
 			return err
 		}
 		if err := gen.Append(
 			`
-				%s, err = strconv.ParseBool(tokens[%s], 10, %d)
+				%s, err = strconv.ParseBool(parameters[%s], 10, %d)
 				if err != nil {
 					return err
 				}
 				%s = %s(%s)
 			`,
-			tmpv,
-			name,
+			v,
+			key,
 			k.Base(),
 			name,
 			k.Type(),
-			tmpv,
+			v,
 		); err != nil {
 			return err
 		}
 	case internal.Int, internal.Int8, internal.Int16, internal.Int32, internal.Int64:
-		tmpv, err := gen.vtmp(t)
+		v, err := gen.vtmp(internal.TPrimitive{TKind: internal.Int64})
 		if err != nil {
 			return err
 		}
 		if err := gen.Append(
 			`
-				%s, err = strconv.ParseInt(tokens[%s], 10, %d)
+				%s, err = strconv.ParseInt(parameters[%s], 10, %d)
 				if err != nil {
 					return err
 				}
 				%s = %s(%s)
 			`,
-			tmpv,
-			name,
+			v,
+			key,
 			k.Base(),
 			name,
 			k.Type(),
-			tmpv,
+			v,
 		); err != nil {
 			return err
 		}
 	case internal.Uint, internal.Uint8, internal.Uint16, internal.Uint32, internal.Uint64:
-		tmpv, err := gen.vtmp(t)
+		v, err := gen.vtmp(internal.TPrimitive{TKind: internal.Uint64})
 		if err != nil {
 			return err
 		}
 		if err := gen.Append(
 			`
-				%s, err = strconv.ParseUint(tokens[%s], 10, %d)
+				%s, err = strconv.ParseUint(parameters[%s], 10, %d)
 				if err != nil {
 					return err
 				}
 				%s = %s(%s)
 			`,
-			tmpv,
-			name,
+			v,
+			key,
 			k.Base(),
 			name,
 			k.Type(),
-			tmpv,
+			v,
 		); err != nil {
 			return err
 		}
 	case internal.Float32, internal.Float64:
-		tmpv, err := gen.vtmp(t)
+		v, err := gen.vtmp(internal.TPrimitive{TKind: internal.Float64})
 		if err != nil {
 			return err
 		}
 		if err := gen.Append(
 			`
-				%s, err = strconv.ParseFloat(tokens[%s], %d)
+				%s, err = strconv.ParseFloat(parameters[%s], %d)
 				if err != nil {
 					return err
 				}
 				%s = %s(%s)
 			`,
-			tmpv,
-			name,
+			v,
+			key,
 			k.Base(),
 			name,
 			k.Type(),
-			tmpv,
+			v,
 		); err != nil {
 			return err
 		}
 	case internal.Complex64, internal.Complex128:
-		tmpv, err := gen.vtmp(t)
+		v, err := gen.vtmp(internal.TPrimitive{TKind: internal.Complex128})
 		if err != nil {
 			return err
 		}
 		if err := gen.Append(
 			`
-				%s, err = strconv.ParseComplex(tokens[%s], %d)
+				%s, err = strconv.ParseComplex(parameters[%s], %d)
 				if err != nil {
 					return err
 				}
 				%s = %s(%s)
 			`,
-			tmpv,
-			name,
+			v,
+			key,
 			k.Base(),
 			name,
 			k.Type(),
-			tmpv,
+			v,
 		); err != nil {
 			return err
 		}
 	case internal.String, internal.Interface:
-		if err := gen.Append("%s = tokens[%s]", name, name); err != nil {
+		if err := gen.Append(`%s = parameters[%s]`, name, key); err != nil {
 			return err
 		}
 	case internal.Array:
 		tarray := t.(internal.TArray)
 		iname := fmt.Sprintf(`fmt.Sprintf("%s%%d", i)`, name)
-		tmpv, err := gen.vtmp(t)
+		v, err := gen.vtmp(tarray.ETyp)
 		if err != nil {
 			return err
 		}
 		if err := gen.Append(`for i := 0; i < %d; i++ {`, tarray.Size); err != nil {
 			return err
 		}
-		if err := gen.passign(tmpv, iname, tarray.ETyp); err != nil {
+		if err := gen.passign(v, iname, tarray.ETyp); err != nil {
 			return err
 		}
 		if err := gen.Append(
@@ -214,7 +227,7 @@ func (gen *fire) passign(name, key string, t internal.Typ) error {
 				}
 			`,
 			name,
-			tmpv,
+			v,
 		); err != nil {
 			return err
 		}
