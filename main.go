@@ -2,32 +2,31 @@ package main
 
 import (
 	"github.com/xyz/playground/generators"
-	"github.com/xyz/playground/intermediate"
+	"github.com/xyz/playground/internal"
 )
 
 func main() {
-	cmd := intermediate.Command{
+	cmd := internal.Command{
 		Pckg: "main",
-		Parameters: []intermediate.Parameter{
-			intermediate.Flag{
+		Parameters: []internal.Parameter{
+			internal.Flag{
 				Full:  "names",
 				Short: "nms",
-				Type: intermediate.TArray{
-					ETyp: intermediate.TPrimitive{
-						TKind: intermediate.String,
+				Type: internal.TArray{
+					ETyp: internal.TPrimitive{
+						TKind: internal.String,
 					},
 					Size: 10,
 				},
 			},
-			intermediate.Argument{
+			internal.Argument{
 				Index: 1,
-				Type: intermediate.TPrimitive{
-					TKind: intermediate.Int,
+				Type: internal.TPrimitive{
+					TKind: internal.Int,
 				},
 			},
 		},
 	}
 	v := generators.NewFire()
 	_ = cmd.Accept(v)
-	_ = v.Dump()
 }

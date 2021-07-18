@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/xyz/playground/intermediate"
+	"github.com/xyz/playground/internal"
 )
 
 type fire struct {
@@ -14,33 +14,32 @@ type fire struct {
 	idx uint64
 }
 
-func NewFire() intermediate.Visitor {
+func NewFire() internal.Visitor {
 	return &fire{
 		buffer: buffer{w: &bytes.Buffer{}},
 	}
 }
 
-func (gen *fire) Dump() error {
-	_, err := os.Stdout.ReadFrom(gen)
-	return err
-}
-
-func (gen *fire) VisitArgument(a intermediate.Argument) error {
+func (gen *fire) VisitArgument(a internal.Argument) error {
 	name := fmt.Sprintf("a%d", a.Index)
 	return gen.passign(name, name, a.Type)
 }
 
-func (gen *fire) VisitFlag(f intermediate.Flag) error {
+func (gen *fire) VisitFlag(f internal.Flag) error {
 	name := fmt.Sprintf("f%s", f.Short)
 	return gen.passign(name, name, f.Type)
 }
 
-func (gen *fire) VisitGroup(g intermediate.Group) intermediate.Cursor {
+func (gen *fire) VisitGroupStart(g internal.Group) error {
 	return nil
 }
 
-func (gen *fire) VisitCommand(c intermediate.Command) intermediate.Cursor {
-	_ = gen.Append(
+func (gen *fire) VisitGroupEnd(g internal.Group) error {
+	return nil
+}
+
+func (gen *fire) VisitCommandStart(c internal.Command) error {
+	return gen.Append(
 		`
 			package %s
 
@@ -49,18 +48,25 @@ func (gen *fire) VisitCommand(c intermediate.Command) intermediate.Cursor {
 				"strconv"
 			)
 			
-			func main() {}
+			func main() {
 		`,
 		c.Pckg,
 	)
-	return nil
 }
 
-func (gen *fire) vdef(name string, t intermediate.Typ) error {
+func (gen *fire) VisitCommandEnd(c internal.Command) error {
+	if err := gen.Append("}"); err != nil {
+		return err
+	}
+	_, err := os.Stdout.ReadFrom(gen.w)
+	return err
+}
+
+func (gen *fire) vdef(name string, t internal.Typ) error {
 	return gen.Append("var %s %s", name, t.Type())
 }
 
-func (gen *fire) vtmp(t intermediate.Typ) (string, error) {
+func (gen *fire) vtmp(t internal.Typ) (string, error) {
 	gen.idx++
 	name := fmt.Sprintf("v%d", gen.idx)
 	if err := gen.vdef(name, t); err != nil {
@@ -69,13 +75,13 @@ func (gen *fire) vtmp(t intermediate.Typ) (string, error) {
 	return name, nil
 }
 
-func (gen *fire) passign(name, key string, t intermediate.Typ) error {
+func (gen *fire) passign(name, key string, t internal.Typ) error {
 	if err := gen.vdef(name, t); err != nil {
 		return err
 	}
 	k := t.Kind()
 	switch k {
-	case intermediate.Bool:
+	case internal.Bool:
 		tmpv, err := gen.vtmp(t)
 		if err != nil {
 			return err
@@ -97,7 +103,7 @@ func (gen *fire) passign(name, key string, t intermediate.Typ) error {
 		); err != nil {
 			return err
 		}
-	case intermediate.Int, intermediate.Int8, intermediate.Int16, intermediate.Int32, intermediate.Int64:
+	case internal.Int, internal.Int8, internal.Int16, internal.Int32, internal.Int64:
 		tmpv, err := gen.vtmp(t)
 		if err != nil {
 			return err
@@ -119,7 +125,7 @@ func (gen *fire) passign(name, key string, t intermediate.Typ) error {
 		); err != nil {
 			return err
 		}
-	case intermediate.Uint, intermediate.Uint8, intermediate.Uint16, intermediate.Uint32, intermediate.Uint64:
+	case internal.Uint, internal.Uint8, internal.Uint16, internal.Uint32, internal.Uint64:
 		tmpv, err := gen.vtmp(t)
 		if err != nil {
 			return err
@@ -141,7 +147,7 @@ func (gen *fire) passign(name, key string, t intermediate.Typ) error {
 		); err != nil {
 			return err
 		}
-	case intermediate.Float32, intermediate.Float64:
+	case internal.Float32, internal.Float64:
 		tmpv, err := gen.vtmp(t)
 		if err != nil {
 			return err
@@ -163,7 +169,7 @@ func (gen *fire) passign(name, key string, t intermediate.Typ) error {
 		); err != nil {
 			return err
 		}
-	case intermediate.Complex64, intermediate.Complex128:
+	case internal.Complex64, internal.Complex128:
 		tmpv, err := gen.vtmp(t)
 		if err != nil {
 			return err
@@ -185,12 +191,12 @@ func (gen *fire) passign(name, key string, t intermediate.Typ) error {
 		); err != nil {
 			return err
 		}
-	case intermediate.String, intermediate.Interface:
+	case internal.String, internal.Interface:
 		if err := gen.Append("%s = tokens[%s]", name, name); err != nil {
 			return err
 		}
-	case intermediate.Array:
-		tarray := t.(intermediate.TArray)
+	case internal.Array:
+		tarray := t.(internal.TArray)
 		iname := fmt.Sprintf(`fmt.Sprintf("%s%%d", i)`, name)
 		tmpv, err := gen.vtmp(t)
 		if err != nil {
@@ -204,12 +210,11 @@ func (gen *fire) passign(name, key string, t intermediate.Typ) error {
 		}
 		if err := gen.Append(
 			`
-					%s = append(%s, %s)
+					%s[i] = %s
 				}
 			`,
 			name,
-			name,
-			iname,
+			tmpv,
 		); err != nil {
 			return err
 		}
