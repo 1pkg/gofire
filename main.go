@@ -1,6 +1,9 @@
 package main
 
 import (
+	"log"
+	"os"
+
 	"github.com/xyz/playground/generators"
 	"github.com/xyz/playground/internal"
 )
@@ -27,6 +30,8 @@ func main() {
 			},
 		},
 	}
-	v := generators.NewFire()
-	_ = cmd.Accept(v)
+	fire := generators.NewFire()
+	if err := fire.Generate(cmd, os.Stdout); err != nil {
+		log.Fatal(err)
+	}
 }

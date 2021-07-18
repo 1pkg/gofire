@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"go/format"
-	"os"
+	"io"
 
 	"github.com/xyz/playground/internal"
 )
@@ -15,7 +15,7 @@ type fire struct {
 	idx uint64
 }
 
-func NewFire() internal.Visitor {
+func NewFire() internal.Generator {
 	return &fire{
 		buffer: buffer{w: &bytes.Buffer{}},
 	}
@@ -26,21 +26,13 @@ func (gen *fire) VisitArgument(a internal.Argument) error {
 	return gen.passign(name, name, a.Type)
 }
 
-func (gen *fire) VisitFlag(f internal.Flag) error {
+func (gen *fire) VisitFlag(f internal.Flag, g *internal.Group) error {
 	name := fmt.Sprintf("f%s", f.Short)
 	return gen.passign(name, name, f.Type)
 }
 
-func (gen *fire) VisitGroupStart(g internal.Group) error {
-	return nil
-}
-
-func (gen *fire) VisitGroupEnd(g internal.Group) error {
-	return nil
-}
-
-func (gen *fire) VisitCommandStart(c internal.Command) error {
-	return gen.Append(
+func (gen *fire) Generate(c internal.Command, w io.Writer) error {
+	if err := gen.Append(
 		`
 			package %s
 
@@ -54,10 +46,12 @@ func (gen *fire) VisitCommandStart(c internal.Command) error {
 				paramenters := make(map[string]string)
 		`,
 		c.Pckg,
-	)
-}
-
-func (gen *fire) VisitCommandEnd(c internal.Command) error {
+	); err != nil {
+		return err
+	}
+	if err := c.Accept(gen); err != nil {
+		return nil
+	}
 	if err := gen.Append("}"); err != nil {
 		return err
 	}
@@ -69,7 +63,7 @@ func (gen *fire) VisitCommandEnd(c internal.Command) error {
 	if err != nil {
 		return err
 	}
-	if _, err := os.Stdout.Write(b); err != nil {
+	if _, err := w.Write(b); err != nil {
 		return err
 	}
 	return nil
