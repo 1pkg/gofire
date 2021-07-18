@@ -5,28 +5,21 @@ import (
 	"fmt"
 	"go/format"
 	"io"
+	"regexp"
+	"strings"
 
 	"github.com/xyz/playground/internal"
 )
 
-type fire struct {
-	buffer
+type Fire struct {
+	bytes.Buffer
 }
 
-func NewFire() internal.Generator {
-	gen := &fire{}
-	gen.rw = &bytes.Buffer{}
-	return &fire{}
-}
-
-func (gen *fire) Generate(c internal.Command, w io.Writer) error {
+func (gen *Fire) Generate(c internal.Command, w io.Writer) error {
 	if err := c.Accept(gen); err != nil {
-		return nil
-	}
-	b, err := gen.bytes()
-	if err != nil {
 		return err
 	}
+	strip := regexp.MustCompile(`\n(\s)+\n`)
 	src := fmt.Sprintf(
 		`
 			package %s
@@ -35,16 +28,19 @@ func (gen *fire) Generate(c internal.Command, w io.Writer) error {
 				"context"
 				"fmt"
 				"strconv"
+				"strings"
 			)
 			
-			func Command(ctx context.Context) (err error) {
+			var params map[string]string
+			func Command(ctx context.Context) error {
 				%s
+				return nil
 			}
 		`,
 		c.Pckg,
-		string(b),
+		strings.Trim(strip.ReplaceAllString(gen.String(), "\n"), "\n\t "),
 	)
-	b, err = format.Source([]byte(src))
+	b, err := format.Source([]byte(src))
 	if err != nil {
 		return err
 	}
@@ -54,17 +50,27 @@ func (gen *fire) Generate(c internal.Command, w io.Writer) error {
 	return nil
 }
 
-func (gen *fire) VisitArgument(a internal.Argument) error {
-	name := fmt.Sprintf("a%d", a.Index)
-	return gen.typ(name, name, a.Type)
+func (gen *Fire) VisitArgument(a internal.Argument) (err error) {
+	return gen.visit(fmt.Sprintf("a%d", a.Index), a.Type)
 }
 
-func (gen *fire) VisitFlag(f internal.Flag, g *internal.Group) error {
-	name := fmt.Sprintf("f%s", f.Short)
-	return gen.typ(name, name, f.Type)
+func (gen *Fire) VisitFlag(f internal.Flag, g *internal.Group) error {
+	return gen.visit(fmt.Sprintf("f%s", f.Short), f.Type)
 }
 
-func (gen *fire) typ(name, key string, t internal.Typ) error {
+func (gen *Fire) visit(name string, typ internal.Typ) (err error) {
+	defer func() {
+		if v := recover(); v != nil {
+			if verr, ok := v.(error); ok {
+				err = verr
+			}
+		}
+	}()
+	gen.typ(name, name, typ)
+	return
+}
+
+func (gen *Fire) typ(name, key string, t internal.Typ) *Fire {
 	k := t.Kind()
 	switch k {
 	case internal.Bool:
@@ -76,6 +82,8 @@ func (gen *fire) typ(name, key string, t internal.Typ) error {
 	case internal.Float32, internal.Float64:
 		fallthrough
 	case internal.Complex64, internal.Complex128:
+		fallthrough
+	case internal.String, internal.Interface:
 		return gen.tprimitive(name, key, t.(internal.TPrimitive))
 	case internal.Array:
 		return gen.tarray(name, key, t.(internal.TArray))
@@ -84,12 +92,12 @@ func (gen *fire) typ(name, key string, t internal.Typ) error {
 	case internal.Map:
 		return gen.tmap(name, key, t.(internal.TMap))
 	default:
-		return fmt.Errorf("unknown type %q can't parsed", t.Type())
+		panic(fmt.Errorf("unknown type %q can't parsed", t.Type()))
 	}
 }
 
-func (gen *fire) tarray(name, key string, t internal.TArray) error {
-	if err := gen.fprintf(
+func (gen *Fire) tarray(name, key string, t internal.TArray) *Fire {
+	return gen.appendf(
 		`
 			var %s %s
 			for i := 0; i < %d; i++ {
@@ -97,17 +105,11 @@ func (gen *fire) tarray(name, key string, t internal.TArray) error {
 		name,
 		t.Type(),
 		t.Size,
-	); err != nil {
-		return err
-	}
-	if err := gen.typ(
+	).typ(
 		fmt.Sprintf("i%s", name),
 		fmt.Sprintf(`fmt.Sprintf("%s_%%d", i)`, name),
 		t.ETyp,
-	); err != nil {
-		return err
-	}
-	return gen.fprintf(
+	).appendf(
 		`
 				%s[i] = i%s
 			}
@@ -117,14 +119,14 @@ func (gen *fire) tarray(name, key string, t internal.TArray) error {
 	)
 }
 
-func (gen *fire) tslice(name, key string, t internal.TSlice) error {
-	if err := gen.fprintf(
+func (gen *Fire) tslice(name, key string, t internal.TSlice) *Fire {
+	return gen.appendf(
 		`
 			var %s %s
 			{
 				var i int64
 				for key := range params {
-					if !strings.HasPrefix(key, %s) {
+					if !strings.HasPrefix(key, %q) {
 						continue
 					}
 					i++
@@ -132,17 +134,11 @@ func (gen *fire) tslice(name, key string, t internal.TSlice) error {
 		name,
 		t.Type(),
 		key,
-	); err != nil {
-		return err
-	}
-	if err := gen.typ(
+	).typ(
 		fmt.Sprintf("i%s", name),
 		fmt.Sprintf(`fmt.Sprintf("%s_%%d", i)`, name),
 		t.ETyp,
-	); err != nil {
-		return err
-	}
-	return gen.fprintf(
+	).appendf(
 		`
 					%s[i] = i%s
 				}
@@ -153,18 +149,46 @@ func (gen *fire) tslice(name, key string, t internal.TSlice) error {
 	)
 }
 
-func (gen *fire) tmap(name, key string, t internal.TMap) error {
-	return nil
+func (gen *Fire) tmap(name, key string, t internal.TMap) *Fire {
+	return gen.appendf(
+		`
+			%s := make(%s)
+			for key, val := range params {
+				if !strings.HasPrefix(key, %q) {
+					continue
+				}
+		`,
+		name,
+		t.Type(),
+		key,
+	).typ(
+		fmt.Sprintf("k%s", name),
+		fmt.Sprintf(`fmt.Sprintf("%s_%%v", key)`, name),
+		t.KTyp,
+	).typ(
+		fmt.Sprintf("v%s", name),
+		fmt.Sprintf(`fmt.Sprintf("%s_%%v", key)`, name),
+		t.KTyp,
+	).appendf(
+		`
+					%s[k%s] = v%s
+				}
+			}
+		`,
+		name,
+		name,
+		name,
+	)
 }
 
-func (gen *fire) tprimitive(name, key string, t internal.TPrimitive) error {
+func (gen *Fire) tprimitive(name, key string, t internal.TPrimitive) *Fire {
 	k := t.Kind()
 	switch k {
 	case internal.Bool:
-		return gen.fprintf(
+		return gen.appendf(
 			`
 				var %s %s
-				if p, ok := params[fmt.Sprintf("%%q", %s")]; ok {
+				if p, ok := params[fmt.Sprintf("%%q", %s)]; ok {
 					t%s, err := strconv.ParseBool(p)
 					if err != nil {
 						return err
@@ -180,10 +204,10 @@ func (gen *fire) tprimitive(name, key string, t internal.TPrimitive) error {
 			name,
 		)
 	case internal.Int, internal.Int8, internal.Int16, internal.Int32, internal.Int64:
-		return gen.fprintf(
+		return gen.appendf(
 			`
 				var %s %s
-				if p, ok := params[fmt.Sprintf("%%q", %s")]; ok {
+				if p, ok := params[fmt.Sprintf("%%q", %s)]; ok {
 					t%s, err := strconv.ParseInt(p, 10, %d)
 					if err != nil {
 						return err
@@ -201,10 +225,10 @@ func (gen *fire) tprimitive(name, key string, t internal.TPrimitive) error {
 			name,
 		)
 	case internal.Uint, internal.Uint8, internal.Uint16, internal.Uint32, internal.Uint64:
-		return gen.fprintf(
+		return gen.appendf(
 			`
 				var %s %s
-				if p, ok := params[fmt.Sprintf("%%q", %s")]; ok {
+				if p, ok := params[fmt.Sprintf("%%q", %s)]; ok {
 					t%s, err := strconv.ParseUint(p, 10, %d)
 					if err != nil {
 						return err
@@ -222,10 +246,10 @@ func (gen *fire) tprimitive(name, key string, t internal.TPrimitive) error {
 			name,
 		)
 	case internal.Float32, internal.Float64:
-		return gen.fprintf(
+		return gen.appendf(
 			`
 				var %s %s
-				if p, ok := params[fmt.Sprintf("%%q", %s")]; ok {
+				if p, ok := params[fmt.Sprintf("%%q", %s)]; ok {
 					t%s, err := strconv.ParseFloat(p, %d)
 					if err != nil {
 						return err
@@ -243,10 +267,10 @@ func (gen *fire) tprimitive(name, key string, t internal.TPrimitive) error {
 			name,
 		)
 	case internal.Complex64, internal.Complex128:
-		return gen.fprintf(
+		return gen.appendf(
 			`
 				var %s %s
-				if p, ok := params[fmt.Sprintf("%%q", %s")]; ok {
+				if p, ok := params[fmt.Sprintf("%%q", %s)]; ok {
 					t%s, err := strconv.ParseComplex(p, %d)
 					if err != nil {
 						return err
@@ -264,10 +288,10 @@ func (gen *fire) tprimitive(name, key string, t internal.TPrimitive) error {
 			name,
 		)
 	case internal.String, internal.Interface:
-		return gen.fprintf(
+		return gen.appendf(
 			`
 				var %s %s
-				if p, ok := params[fmt.Sprintf("%%q", %s")]; ok {
+				if p, ok := params[fmt.Sprintf("%%q", %s)]; ok {
 					%s = p
 				}
 			`,
@@ -277,6 +301,13 @@ func (gen *fire) tprimitive(name, key string, t internal.TPrimitive) error {
 			name,
 		)
 	default:
-		return fmt.Errorf("type %q can't parsed as primitive type", t.Type())
+		panic(fmt.Errorf("type %q can't parsed as primitive type", t.Type()))
 	}
+}
+
+func (gen *Fire) appendf(format string, a ...interface{}) *Fire {
+	if _, err := fmt.Fprintf(gen, format, a...); err != nil {
+		panic(err)
+	}
+	return gen
 }

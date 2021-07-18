@@ -28,9 +28,23 @@ func main() {
 					TKind: internal.Int,
 				},
 			},
+			internal.Flag{
+				Full:  "deep",
+				Short: "d",
+				Type: internal.TSlice{
+					ETyp: internal.TArray{
+						Size: 1,
+						ETyp: internal.TSlice{
+							ETyp: internal.TPrimitive{
+								TKind: internal.Int64,
+							},
+						},
+					},
+				},
+			},
 		},
 	}
-	fire := generators.NewFire()
+	fire := &generators.Fire{}
 	if err := fire.Generate(cmd, os.Stdout); err != nil {
 		log.Fatal(err)
 	}
