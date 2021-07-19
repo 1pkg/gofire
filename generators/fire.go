@@ -26,7 +26,6 @@ func (gen *Fire) Generate(c gofire.Command, w io.Writer) error {
 
 			import(
 				"context"
-				"fmt"
 				"strconv"
 				"strings"
 			)
@@ -66,7 +65,7 @@ func (gen *Fire) visit(name string, typ gofire.Typ) (err error) {
 			}
 		}
 	}()
-	gen.typ(name, name, typ)
+	gen.typ(name, fmt.Sprintf(`"%s"`, name), typ)
 	return
 }
 
@@ -97,87 +96,109 @@ func (gen *Fire) typ(name, key string, t gofire.Typ) *Fire {
 }
 
 func (gen *Fire) tarray(name, key string, t gofire.TArray) *Fire {
+	vname := fmt.Sprintf("%sv", name)
+	iname := fmt.Sprintf("%si", name)
+	ikey := fmt.Sprintf(`%s + "_" + strconv.Itoa(%s)`, key, iname)
 	return gen.appendf(
 		`
 			var %s %s
-			for i := 0; i < %d; i++ {
+			for %s := 0; %s < %d; %s++ {
 		`,
 		name,
 		t.Type(),
+		iname,
+		iname,
 		t.Size,
+		iname,
 	).typ(
-		fmt.Sprintf("i%s", name),
-		fmt.Sprintf(`fmt.Sprintf("%s_%%d", i)`, name),
+		vname,
+		ikey,
 		t.ETyp,
 	).appendf(
 		`
-				%s[i] = i%s
+				%s[%s] = %s
 			}
 		`,
 		name,
-		name,
+		iname,
+		vname,
 	)
 }
 
 func (gen *Fire) tslice(name, key string, t gofire.TSlice) *Fire {
+	vname := fmt.Sprintf("%sv", name)
+	iname := fmt.Sprintf("%si", name)
+	ikey := fmt.Sprintf(`%s + "_" + strconv.Itoa(%s)`, key, iname)
 	return gen.appendf(
 		`
 			var %s %s
-			{
-				var i int64
-				for key := range params {
-					if !strings.HasPrefix(key, %q) {
-						continue
-					}
-					i++
+			var %s int
+			for k := range params {
+				if !strings.HasPrefix(k, %s) {
+					continue
+				}
+				%s++
 		`,
 		name,
 		t.Type(),
+		iname,
 		key,
+		iname,
 	).typ(
-		fmt.Sprintf("i%s", name),
-		fmt.Sprintf(`fmt.Sprintf("%s_%%d", i)`, name),
+		vname,
+		ikey,
 		t.ETyp,
 	).appendf(
 		`
-					%s[i] = i%s
-				}
+				%s[%s] = %s
 			}
 		`,
 		name,
-		name,
+		iname,
+		vname,
 	)
 }
 
 func (gen *Fire) tmap(name, key string, t gofire.TMap) *Fire {
+	vkname := fmt.Sprintf("%sx", name)
+	kname := fmt.Sprintf("%sk", name)
+	vpname := fmt.Sprintf("%sz", name)
+	iname := fmt.Sprintf("%si", name)
+	kkey := fmt.Sprintf(`%s + "_k_" + strconv.Itoa(%s)`, key, iname)
+	pkey := fmt.Sprintf(`%s + "_v_" + strconv.Itoa(%s)`, key, iname)
 	return gen.appendf(
 		`
 			%s := make(%s)
-			for key, val := range params {
-				if !strings.HasPrefix(key, %q) {
+			var %s int
+			for %s := range params {
+				if !strings.HasPrefix(%s, %s) {
 					continue
 				}
+				%s++
 		`,
 		name,
 		t.Type(),
-		key,
+		iname,
+		kname,
+		kname,
+		kkey,
+		iname,
 	).typ(
-		fmt.Sprintf("k%s", name),
-		fmt.Sprintf(`fmt.Sprintf("%s_%%v", key)`, name),
+		vkname,
+		kkey,
 		t.KTyp,
 	).typ(
-		fmt.Sprintf("v%s", name),
-		fmt.Sprintf(`fmt.Sprintf("%s_%%v", key)`, name),
-		t.KTyp,
+		vpname,
+		pkey,
+		t.VTyp,
 	).appendf(
 		`
-					%s[k%s] = v%s
-				}
+				%s[%s] = %s
 			}
 		`,
 		name,
-		name,
-		name,
+		vkname,
+		vpname,
 	)
 }
 
@@ -188,7 +209,7 @@ func (gen *Fire) tprimitive(name, key string, t gofire.TPrimitive) *Fire {
 		return gen.appendf(
 			`
 				var %s %s
-				if p, ok := params[fmt.Sprintf("%%q", %s)]; ok {
+				if p, ok := params[%s]; ok {
 					t%s, err := strconv.ParseBool(p)
 					if err != nil {
 						return err
@@ -207,7 +228,7 @@ func (gen *Fire) tprimitive(name, key string, t gofire.TPrimitive) *Fire {
 		return gen.appendf(
 			`
 				var %s %s
-				if p, ok := params[fmt.Sprintf("%%q", %s)]; ok {
+				if p, ok := params[%s]; ok {
 					t%s, err := strconv.ParseInt(p, 10, %d)
 					if err != nil {
 						return err
@@ -228,7 +249,7 @@ func (gen *Fire) tprimitive(name, key string, t gofire.TPrimitive) *Fire {
 		return gen.appendf(
 			`
 				var %s %s
-				if p, ok := params[fmt.Sprintf("%%q", %s)]; ok {
+				if p, ok := params[%s]; ok {
 					t%s, err := strconv.ParseUint(p, 10, %d)
 					if err != nil {
 						return err
@@ -249,7 +270,7 @@ func (gen *Fire) tprimitive(name, key string, t gofire.TPrimitive) *Fire {
 		return gen.appendf(
 			`
 				var %s %s
-				if p, ok := params[fmt.Sprintf("%%q", %s)]; ok {
+				if p, ok := params[%s]; ok {
 					t%s, err := strconv.ParseFloat(p, %d)
 					if err != nil {
 						return err
@@ -270,7 +291,7 @@ func (gen *Fire) tprimitive(name, key string, t gofire.TPrimitive) *Fire {
 		return gen.appendf(
 			`
 				var %s %s
-				if p, ok := params[fmt.Sprintf("%%q", %s)]; ok {
+				if p, ok := params[%s]; ok {
 					t%s, err := strconv.ParseComplex(p, %d)
 					if err != nil {
 						return err
@@ -291,7 +312,7 @@ func (gen *Fire) tprimitive(name, key string, t gofire.TPrimitive) *Fire {
 		return gen.appendf(
 			`
 				var %s %s
-				if p, ok := params[fmt.Sprintf("%%q", %s)]; ok {
+				if p, ok := params[%s]; ok {
 					%s = p
 				}
 			`,

@@ -22,10 +22,17 @@ func main() {
 					Size: 10,
 				},
 			},
-			gofire.Argument{
-				Index: 1,
-				Type: gofire.TPrimitive{
-					TKind: gofire.Int,
+			gofire.Flag{
+				Full:  "mp",
+				Short: "p",
+				Type: gofire.TMap{
+					KTyp: gofire.TPrimitive{TKind: gofire.Int8},
+					VTyp: gofire.TMap{
+						KTyp: gofire.TPrimitive{TKind: gofire.String},
+						VTyp: gofire.TSlice{
+							ETyp: gofire.TPrimitive{TKind: gofire.Interface},
+						},
+					},
 				},
 			},
 			gofire.Flag{

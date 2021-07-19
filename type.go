@@ -125,7 +125,12 @@ func (t TPrimitive) Kind() Kind {
 }
 
 func (t TPrimitive) Type() string {
-	return t.TKind.Type()
+	switch t.Kind() {
+	case Interface:
+		return "interface{}"
+	default:
+		return t.TKind.Type()
+	}
 }
 
 func (TPrimitive) Collection() bool {
@@ -170,7 +175,7 @@ type TMap struct {
 }
 
 func (TMap) Kind() Kind {
-	return Slice
+	return Map
 }
 
 func (t TMap) Type() string {
