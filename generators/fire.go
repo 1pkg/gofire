@@ -8,14 +8,14 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/xyz/playground/internal"
+	"github.com/xyz/gofire"
 )
 
 type Fire struct {
 	bytes.Buffer
 }
 
-func (gen *Fire) Generate(c internal.Command, w io.Writer) error {
+func (gen *Fire) Generate(c gofire.Command, w io.Writer) error {
 	if err := c.Accept(gen); err != nil {
 		return err
 	}
@@ -50,15 +50,15 @@ func (gen *Fire) Generate(c internal.Command, w io.Writer) error {
 	return nil
 }
 
-func (gen *Fire) VisitArgument(a internal.Argument) (err error) {
+func (gen *Fire) VisitArgument(a gofire.Argument) (err error) {
 	return gen.visit(fmt.Sprintf("a%d", a.Index), a.Type)
 }
 
-func (gen *Fire) VisitFlag(f internal.Flag, g *internal.Group) error {
+func (gen *Fire) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 	return gen.visit(fmt.Sprintf("f%s", f.Short), f.Type)
 }
 
-func (gen *Fire) visit(name string, typ internal.Typ) (err error) {
+func (gen *Fire) visit(name string, typ gofire.Typ) (err error) {
 	defer func() {
 		if v := recover(); v != nil {
 			if verr, ok := v.(error); ok {
@@ -70,33 +70,33 @@ func (gen *Fire) visit(name string, typ internal.Typ) (err error) {
 	return
 }
 
-func (gen *Fire) typ(name, key string, t internal.Typ) *Fire {
+func (gen *Fire) typ(name, key string, t gofire.Typ) *Fire {
 	k := t.Kind()
 	switch k {
-	case internal.Bool:
+	case gofire.Bool:
 		fallthrough
-	case internal.Int, internal.Int8, internal.Int16, internal.Int32, internal.Int64:
+	case gofire.Int, gofire.Int8, gofire.Int16, gofire.Int32, gofire.Int64:
 		fallthrough
-	case internal.Uint, internal.Uint8, internal.Uint16, internal.Uint32, internal.Uint64:
+	case gofire.Uint, gofire.Uint8, gofire.Uint16, gofire.Uint32, gofire.Uint64:
 		fallthrough
-	case internal.Float32, internal.Float64:
+	case gofire.Float32, gofire.Float64:
 		fallthrough
-	case internal.Complex64, internal.Complex128:
+	case gofire.Complex64, gofire.Complex128:
 		fallthrough
-	case internal.String, internal.Interface:
-		return gen.tprimitive(name, key, t.(internal.TPrimitive))
-	case internal.Array:
-		return gen.tarray(name, key, t.(internal.TArray))
-	case internal.Slice:
-		return gen.tslice(name, key, t.(internal.TSlice))
-	case internal.Map:
-		return gen.tmap(name, key, t.(internal.TMap))
+	case gofire.String, gofire.Interface:
+		return gen.tprimitive(name, key, t.(gofire.TPrimitive))
+	case gofire.Array:
+		return gen.tarray(name, key, t.(gofire.TArray))
+	case gofire.Slice:
+		return gen.tslice(name, key, t.(gofire.TSlice))
+	case gofire.Map:
+		return gen.tmap(name, key, t.(gofire.TMap))
 	default:
 		panic(fmt.Errorf("unknown type %q can't parsed", t.Type()))
 	}
 }
 
-func (gen *Fire) tarray(name, key string, t internal.TArray) *Fire {
+func (gen *Fire) tarray(name, key string, t gofire.TArray) *Fire {
 	return gen.appendf(
 		`
 			var %s %s
@@ -119,7 +119,7 @@ func (gen *Fire) tarray(name, key string, t internal.TArray) *Fire {
 	)
 }
 
-func (gen *Fire) tslice(name, key string, t internal.TSlice) *Fire {
+func (gen *Fire) tslice(name, key string, t gofire.TSlice) *Fire {
 	return gen.appendf(
 		`
 			var %s %s
@@ -149,7 +149,7 @@ func (gen *Fire) tslice(name, key string, t internal.TSlice) *Fire {
 	)
 }
 
-func (gen *Fire) tmap(name, key string, t internal.TMap) *Fire {
+func (gen *Fire) tmap(name, key string, t gofire.TMap) *Fire {
 	return gen.appendf(
 		`
 			%s := make(%s)
@@ -181,10 +181,10 @@ func (gen *Fire) tmap(name, key string, t internal.TMap) *Fire {
 	)
 }
 
-func (gen *Fire) tprimitive(name, key string, t internal.TPrimitive) *Fire {
+func (gen *Fire) tprimitive(name, key string, t gofire.TPrimitive) *Fire {
 	k := t.Kind()
 	switch k {
-	case internal.Bool:
+	case gofire.Bool:
 		return gen.appendf(
 			`
 				var %s %s
@@ -203,7 +203,7 @@ func (gen *Fire) tprimitive(name, key string, t internal.TPrimitive) *Fire {
 			name,
 			name,
 		)
-	case internal.Int, internal.Int8, internal.Int16, internal.Int32, internal.Int64:
+	case gofire.Int, gofire.Int8, gofire.Int16, gofire.Int32, gofire.Int64:
 		return gen.appendf(
 			`
 				var %s %s
@@ -224,7 +224,7 @@ func (gen *Fire) tprimitive(name, key string, t internal.TPrimitive) *Fire {
 			k.Type(),
 			name,
 		)
-	case internal.Uint, internal.Uint8, internal.Uint16, internal.Uint32, internal.Uint64:
+	case gofire.Uint, gofire.Uint8, gofire.Uint16, gofire.Uint32, gofire.Uint64:
 		return gen.appendf(
 			`
 				var %s %s
@@ -245,7 +245,7 @@ func (gen *Fire) tprimitive(name, key string, t internal.TPrimitive) *Fire {
 			k.Type(),
 			name,
 		)
-	case internal.Float32, internal.Float64:
+	case gofire.Float32, gofire.Float64:
 		return gen.appendf(
 			`
 				var %s %s
@@ -266,7 +266,7 @@ func (gen *Fire) tprimitive(name, key string, t internal.TPrimitive) *Fire {
 			k.Type(),
 			name,
 		)
-	case internal.Complex64, internal.Complex128:
+	case gofire.Complex64, gofire.Complex128:
 		return gen.appendf(
 			`
 				var %s %s
@@ -287,7 +287,7 @@ func (gen *Fire) tprimitive(name, key string, t internal.TPrimitive) *Fire {
 			k.Type(),
 			name,
 		)
-	case internal.String, internal.Interface:
+	case gofire.String, gofire.Interface:
 		return gen.appendf(
 			`
 				var %s %s
