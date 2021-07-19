@@ -161,8 +161,8 @@ func (gen *Fire) tslice(name, key string, t gofire.TSlice) *Fire {
 
 func (gen *Fire) tmap(name, key string, t gofire.TMap) *Fire {
 	vkname := fmt.Sprintf("%sx", name)
-	kname := fmt.Sprintf("%sk", name)
 	vpname := fmt.Sprintf("%sz", name)
+	kname := fmt.Sprintf("%sk", name)
 	iname := fmt.Sprintf("%si", name)
 	kkey := fmt.Sprintf(`%s + "_k_" + strconv.Itoa(%s)`, key, iname)
 	pkey := fmt.Sprintf(`%s + "_v_" + strconv.Itoa(%s)`, key, iname)
@@ -171,7 +171,7 @@ func (gen *Fire) tmap(name, key string, t gofire.TMap) *Fire {
 			%s := make(%s)
 			var %s int
 			for %s := range params {
-				if !strings.HasPrefix(%s, %s) {
+				if !strings.HasPrefix(%s, %s+"_k") {
 					continue
 				}
 				%s++
@@ -181,7 +181,7 @@ func (gen *Fire) tmap(name, key string, t gofire.TMap) *Fire {
 		iname,
 		kname,
 		kname,
-		kkey,
+		key,
 		iname,
 	).typ(
 		vkname,
