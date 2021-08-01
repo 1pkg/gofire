@@ -38,7 +38,7 @@ func Generate(ctx context.Context, driver DriverName, cmd gofire.Command, w io.W
 	if err != nil {
 		return err
 	}
-	callExpr, retSing, docsStr := funcCallSinnature(cmd)
+	callExpr, retSign, docsStr := callSignature(cmd)
 	src := fmt.Sprintf(
 		`
 			package %s
@@ -62,7 +62,7 @@ func Generate(ctx context.Context, driver DriverName, cmd gofire.Command, w io.W
 		importStr,
 		docsStr,
 		cmd.Name,
-		retSing,
+		retSign,
 		driverCode,
 		fmt.Sprintf(callExpr, parametersStr),
 	)
@@ -93,22 +93,22 @@ func applyDriver(ctx context.Context, name DriverName, cmd gofire.Command) (impo
 	return
 }
 
-func funcCallSinnature(cmd gofire.Command) (call string, ret string, docs string) {
-	if cmd.Func.Context {
+func callSignature(cmd gofire.Command) (call string, ret string, docs string) {
+	if cmd.Context {
 		call = fmt.Sprintf("%s(ctx, %%s)", cmd.Name)
 	} else {
 		call = fmt.Sprintf("%s(%%s)", cmd.Name)
 	}
-	if len(cmd.Func.Returns) != 0 {
-		rnames := make([]string, 0, len(cmd.Func.Returns))
+	if len(cmd.Returns) != 0 {
+		rnames := make([]string, 0, len(cmd.Returns))
 		errIndex := -1
-		for i, typ := range cmd.Func.Returns {
+		for i, typ := range cmd.Returns {
 			rnames = append(rnames, fmt.Sprintf("o%d", i))
 			if typ == "error" {
 				errIndex = i
 			}
 		}
-		rtypes := cmd.Func.Returns
+		rtypes := cmd.Returns
 		if errIndex > 0 {
 			rnames[errIndex] = "err"
 		}
@@ -122,7 +122,7 @@ func funcCallSinnature(cmd gofire.Command) (call string, ret string, docs string
 			ret += fmt.Sprintf("%s %s,", rnames[i], rtypes[i])
 		}
 	}
-	if len(cmd.Func.Returns) == 0 {
+	if len(cmd.Returns) == 0 {
 		ret = "err error"
 	}
 	doc := strings.Trim(cmd.Doc, "\n\t ")

@@ -17,12 +17,10 @@ func main() {
 		Doc: `
 		Some comments here
 		zzzzz
-		aaaaaaaaaaaaa
+		// aaaaaaaaaaaaa
 		`,
-		Func: gofire.Signature{
-			Context: true,
-			Returns: []string{"int", "string", "error", "string", "error"},
-		},
+		Context: true,
+		Returns: []string{"int", "string", "error", "string", "error"},
 		Parameters: []gofire.Parameter{
 			gofire.Flag{
 				Full:  "names",
