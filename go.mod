@@ -1,3 +1,3 @@
-module github.com/xyz/gofire
+module github.com/1pkg/gofire
 
 go 1.16

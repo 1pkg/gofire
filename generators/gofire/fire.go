@@ -1,4 +1,4 @@
-package generators
+package gofire
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/xyz/gofire"
+	"github.com/1pkg/gofire"
 )
 
 type Fire struct {

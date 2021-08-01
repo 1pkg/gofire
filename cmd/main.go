@@ -4,8 +4,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/xyz/gofire"
-	"github.com/xyz/gofire/generators"
+	"github.com/1pkg/gofire"
+	generators "github.com/1pkg/gofire/generators/gofire.
 )
 
 func main() {
