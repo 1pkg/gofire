@@ -13,6 +13,11 @@ import (
 func main() {
 	cmd := gofire.Command{
 		Pckg: "main",
+		Func: gofire.Function{
+			Name:    "SomeFunc",
+			Context: true,
+			Return:  true,
+		},
 		Parameters: []gofire.Parameter{
 			gofire.Flag{
 				Full:  "names",

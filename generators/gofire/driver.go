@@ -49,6 +49,7 @@ func (d *driver) visit(name string, typ gofire.Typ) (err error) {
 			}
 		}
 	}()
+	d.params = append(d.params, name)
 	d.typ(name, fmt.Sprintf(`"%s"`, name), typ)
 	return
 }

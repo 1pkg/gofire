@@ -50,11 +50,17 @@ func (g Group) Accept(v Visitor) error {
 	return nil
 }
 
+type Function struct {
+	Name    string
+	Context bool
+	Return  bool
+}
+
 type Command struct {
 	Name       string
 	Doc        string
 	Pckg       string
-	Func       string
+	Func       Function
 	Parameters []Parameter
 }
 
