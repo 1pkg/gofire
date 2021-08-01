@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 
 	"github.com/1pkg/gofire"
-	generators "github.com/1pkg/gofire/generators/gofire.
+	"github.com/1pkg/gofire/generators"
+	_ "github.com/1pkg/gofire/generators/gofire.
 )
 
 func main() {
@@ -51,8 +53,7 @@ func main() {
 			},
 		},
 	}
-	fire := &generators.Fire{}
-	if err := fire.Generate(cmd, os.Stdout); err != nil {
+	if err := generators.Generate(context.TODO(), generators.DriverNameGofire, cmd, os.Stdout); err != nil {
 		log.Fatal(err)
 	}
 }

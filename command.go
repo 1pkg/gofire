@@ -1,5 +1,10 @@
 package gofire
 
+type Visitor interface {
+	VisitArgument(Argument) error
+	VisitFlag(Flag, *Group) error
+}
+
 type Parameter interface {
 	Accept(Visitor) error
 }
