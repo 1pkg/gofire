@@ -22,10 +22,15 @@ const (
 	Complex64
 	Complex128
 	String
-	Interface
 	Array
 	Slice
 	Map
+	Ptr
+	UnsafePointer
+	Chan
+	Func
+	Struct
+	Interface
 )
 
 func (k Kind) Type() string {
@@ -62,14 +67,14 @@ func (k Kind) Type() string {
 		return "complex128"
 	case String:
 		return "string"
-	case Interface:
-		return "interface"
 	case Array:
 		return "array"
 	case Slice:
 		return "slice"
 	case Map:
 		return "map"
+	case Ptr:
+		return "ptr"
 	default:
 		return "invalid"
 	}
@@ -113,7 +118,6 @@ func (k Kind) Base() int16 {
 type Typ interface {
 	Kind() Kind
 	Type() string
-	Collection() bool
 }
 
 type TPrimitive struct {
@@ -125,16 +129,7 @@ func (t TPrimitive) Kind() Kind {
 }
 
 func (t TPrimitive) Type() string {
-	switch t.Kind() {
-	case Interface:
-		return "interface{}"
-	default:
-		return t.TKind.Type()
-	}
-}
-
-func (TPrimitive) Collection() bool {
-	return false
+	return t.TKind.Type()
 }
 
 type TArray struct {
@@ -150,10 +145,6 @@ func (t TArray) Type() string {
 	return fmt.Sprintf("[%d]%s", t.Size, t.ETyp.Type())
 }
 
-func (TArray) Collection() bool {
-	return true
-}
-
 type TSlice struct {
 	ETyp Typ
 }
@@ -164,10 +155,6 @@ func (TSlice) Kind() Kind {
 
 func (t TSlice) Type() string {
 	return fmt.Sprintf("[]%s", t.ETyp.Type())
-}
-
-func (TSlice) Collection() bool {
-	return true
 }
 
 type TMap struct {
@@ -182,6 +169,14 @@ func (t TMap) Type() string {
 	return fmt.Sprintf("map[%s]%s", t.KTyp.Type(), t.VTyp.Type())
 }
 
-func (TMap) Collection() bool {
-	return true
+type TPtr struct {
+	ETyp Typ
+}
+
+func (TPtr) Kind() Kind {
+	return Ptr
+}
+
+func (t TPtr) Type() string {
+	return fmt.Sprintf("*%s", t.ETyp.Type())
 }

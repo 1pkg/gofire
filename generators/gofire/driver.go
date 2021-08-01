@@ -20,6 +20,7 @@ type driver struct {
 func (d driver) Imports() []string {
 	return []string{
 		`"context"`,
+		`"errors"`,
 		`"fmt"`,
 		`"strconv"`,
 		`"strings"`,
@@ -82,7 +83,12 @@ func (d *driver) Reset() (err error) {
 }
 
 func (d *driver) VisitArgument(a gofire.Argument) (err error) {
-	return d.visit(fmt.Sprintf("a%d", a.Index), "", a.Type)
+	return d.visit(
+		fmt.Sprintf("a%d", a.Index),
+		"",
+		a.Type,
+		nil,
+	)
 }
 
 func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
@@ -90,14 +96,19 @@ func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 	if g != nil {
 		gname = g.Name
 	}
+	var defValue *string
+	if f.Optional {
+		defValue = &f.Default
+	}
 	return d.visit(
 		fmt.Sprintf("f%s%s", gname, f.Full),
 		fmt.Sprintf("f%s%s", gname, f.Short),
 		f.Type,
+		defValue,
 	)
 }
 
-func (d *driver) visit(name, altName string, typ gofire.Typ) (err error) {
+func (d *driver) visit(name, altName string, typ gofire.Typ, defValue *string) (err error) {
 	defer func() {
 		if v := recover(); v != nil {
 			if verr, ok := v.(error); ok {
@@ -106,11 +117,17 @@ func (d *driver) visit(name, altName string, typ gofire.Typ) (err error) {
 		}
 	}()
 	d.params = append(d.params, name)
-	d.typ(name, fmt.Sprintf(`"%s"`, name), fmt.Sprintf(`"%s"`, altName), typ)
+	d.typ(
+		name,
+		fmt.Sprintf(`"%s"`, name),
+		fmt.Sprintf(`"%s"`, altName),
+		typ,
+		defValue,
+	)
 	return
 }
 
-func (d *driver) typ(name, key, altKey string, t gofire.Typ) *driver {
+func (d *driver) typ(name, key, altKey string, t gofire.Typ, defValue *string) *driver {
 	k := t.Kind()
 	switch k {
 	case gofire.Bool:
@@ -124,19 +141,19 @@ func (d *driver) typ(name, key, altKey string, t gofire.Typ) *driver {
 	case gofire.Complex64, gofire.Complex128:
 		fallthrough
 	case gofire.String:
-		return d.tprimitive(name, key, altKey, t.(gofire.TPrimitive))
+		return d.tprimitive(name, key, altKey, t.(gofire.TPrimitive), defValue)
 	case gofire.Array:
-		return d.tarray(name, key, altKey, t.(gofire.TArray))
+		return d.tarray(name, key, altKey, t.(gofire.TArray), defValue)
 	case gofire.Slice:
-		return d.tslice(name, key, altKey, t.(gofire.TSlice))
+		return d.tslice(name, key, altKey, t.(gofire.TSlice), defValue)
 	case gofire.Map:
-		return d.tmap(name, key, altKey, t.(gofire.TMap))
+		return d.tmap(name, key, altKey, t.(gofire.TMap), defValue)
 	default:
 		panic(fmt.Errorf("unknown or ambiguous type %q can't be parsed", t.Type()))
 	}
 }
 
-func (d *driver) tarray(name, key, altKey string, t gofire.TArray) *driver {
+func (d *driver) tarray(name, key, altKey string, t gofire.TArray, defValue *string) *driver {
 	vname := fmt.Sprintf("%sv", name)
 	iname := fmt.Sprintf("%si", name)
 	ikey := fmt.Sprintf(`%s + "_" + strconv.Itoa(%s)`, key, iname)
@@ -156,6 +173,7 @@ func (d *driver) tarray(name, key, altKey string, t gofire.TArray) *driver {
 		ikey,
 		altKey,
 		t.ETyp,
+		defValue,
 	).appendf(
 		`
 				%s[%s] = %s
@@ -167,7 +185,7 @@ func (d *driver) tarray(name, key, altKey string, t gofire.TArray) *driver {
 	)
 }
 
-func (d *driver) tslice(name, key, altKey string, t gofire.TSlice) *driver {
+func (d *driver) tslice(name, key, altKey string, t gofire.TSlice, defValue *string) *driver {
 	vname := fmt.Sprintf("%sv", name)
 	iname := fmt.Sprintf("%si", name)
 	ikey := fmt.Sprintf(`%s + "_" + strconv.Itoa(%s)`, key, iname)
@@ -191,6 +209,7 @@ func (d *driver) tslice(name, key, altKey string, t gofire.TSlice) *driver {
 		ikey,
 		altKey,
 		t.ETyp,
+		defValue,
 	).appendf(
 		`
 				%s[%s] = %s
@@ -202,7 +221,7 @@ func (d *driver) tslice(name, key, altKey string, t gofire.TSlice) *driver {
 	)
 }
 
-func (d *driver) tmap(name, key, altKey string, t gofire.TMap) *driver {
+func (d *driver) tmap(name, key, altKey string, t gofire.TMap, defValue *string) *driver {
 	vkname := fmt.Sprintf("%sx", name)
 	vpname := fmt.Sprintf("%sz", name)
 	kname := fmt.Sprintf("%sk", name)
@@ -231,11 +250,13 @@ func (d *driver) tmap(name, key, altKey string, t gofire.TMap) *driver {
 		kkey,
 		altKey,
 		t.KTyp,
+		defValue,
 	).typ(
 		vpname,
 		pkey,
 		altKey,
 		t.VTyp,
+		defValue,
 	).appendf(
 		`
 				%s[%s] = %s
@@ -247,7 +268,7 @@ func (d *driver) tmap(name, key, altKey string, t gofire.TMap) *driver {
 	)
 }
 
-func (d *driver) tprimitive(name, key, altKey string, t gofire.TPrimitive) *driver {
+func (d *driver) tprimitive(name, key, altKey string, t gofire.TPrimitive, defValue *string) *driver {
 	k := t.Kind()
 	switch k {
 	case gofire.Bool:
@@ -268,6 +289,43 @@ func (d *driver) tprimitive(name, key, altKey string, t gofire.TPrimitive) *driv
 			name,
 			name,
 			name,
+		).ifAppendf(
+			altKey != "",
+			`
+				else if p, ok := tokens[%s]; ok {
+					t%s, err := strconv.ParseBool(p)
+					if err != nil {
+						return err
+					}
+					%s = t%s
+				}
+			`,
+			altKey,
+			name,
+			name,
+			name,
+		).ifElseAppendf(
+			defValue != nil,
+			`
+				else {
+					t%s, err := strconv.ParseBool(%q)
+					if err != nil {
+						return err
+					}
+					%s = t%s
+				}
+			`,
+			name,
+			sderef(defValue),
+			name,
+			name,
+		)(
+			`
+				else {
+					return errors.New("required cli argument %s hasn't been provided")
+				}
+			`,
+			key,
 		)
 	case gofire.Int, gofire.Int8, gofire.Int16, gofire.Int32, gofire.Int64:
 		return d.appendf(
@@ -289,6 +347,47 @@ func (d *driver) tprimitive(name, key, altKey string, t gofire.TPrimitive) *driv
 			name,
 			k.Type(),
 			name,
+		).ifAppendf(
+			altKey != "",
+			`
+				else if p, ok := tokens[%s]; ok {
+					t%s, err := strconv.ParseInt(p, 10, %d)
+					if err != nil {
+						return err
+					}
+					%s = %s(t%s)
+				}
+			`,
+			altKey,
+			name,
+			k.Base(),
+			name,
+			k.Type(),
+			name,
+		).ifElseAppendf(
+			defValue != nil,
+			`
+				else {
+					t%s, err := strconv.ParseInt(%q, 10, %d)
+					if err != nil {
+						return err
+					}
+					%s = %s(t%s)
+				}
+			`,
+			name,
+			sderef(defValue),
+			k.Base(),
+			name,
+			k.Type(),
+			name,
+		)(
+			`
+				else {
+					return errors.New("required cli argument %s hasn't been provided")
+				}
+			`,
+			key,
 		)
 	case gofire.Uint, gofire.Uint8, gofire.Uint16, gofire.Uint32, gofire.Uint64:
 		return d.appendf(
@@ -310,6 +409,47 @@ func (d *driver) tprimitive(name, key, altKey string, t gofire.TPrimitive) *driv
 			name,
 			k.Type(),
 			name,
+		).ifAppendf(
+			altKey != "",
+			`
+				else if p, ok := tokens[%s]; ok {
+					t%s, err := strconv.ParseUint(p, 10, %d)
+					if err != nil {
+						return err
+					}
+					%s = %s(t%s)
+				}
+			`,
+			altKey,
+			name,
+			k.Base(),
+			name,
+			k.Type(),
+			name,
+		).ifElseAppendf(
+			defValue != nil,
+			`
+				else {
+					t%s, err := strconv.ParseUint(%q, 10, %d)
+					if err != nil {
+						return err
+					}
+					%s = %s(t%s)
+				}
+			`,
+			name,
+			sderef(defValue),
+			k.Base(),
+			name,
+			k.Type(),
+			name,
+		)(
+			`
+				else {
+					return errors.New("required cli argument %s hasn't been provided")
+				}
+			`,
+			key,
 		)
 	case gofire.Float32, gofire.Float64:
 		return d.appendf(
@@ -331,6 +471,47 @@ func (d *driver) tprimitive(name, key, altKey string, t gofire.TPrimitive) *driv
 			name,
 			k.Type(),
 			name,
+		).ifAppendf(
+			altKey != "",
+			`
+				else if p, ok := tokens[%s]; ok {
+					t%s, err := strconv.ParseFloat(p, %d)
+					if err != nil {
+						return err
+					}
+					%s = %s(t%s)
+				}
+			`,
+			altKey,
+			name,
+			k.Base(),
+			name,
+			k.Type(),
+			name,
+		).ifElseAppendf(
+			defValue != nil,
+			`
+				else {
+					t%s, err := strconv.ParseFloat(%q, %d)
+					if err != nil {
+						return err
+					}
+					%s = %s(t%s)
+				}
+			`,
+			name,
+			sderef(defValue),
+			k.Base(),
+			name,
+			k.Type(),
+			name,
+		)(
+			`
+				else {
+					return errors.New("required cli argument %s hasn't been provided")
+				}
+			`,
+			key,
 		)
 	case gofire.Complex64, gofire.Complex128:
 		return d.appendf(
@@ -352,6 +533,47 @@ func (d *driver) tprimitive(name, key, altKey string, t gofire.TPrimitive) *driv
 			name,
 			k.Type(),
 			name,
+		).ifAppendf(
+			altKey != "",
+			`
+				else if p, ok := tokens[%s]; ok {
+					t%s, err := strconv.ParseComplex(p, %d)
+					if err != nil {
+						return err
+					}
+					%s = %s(t%s)
+				}
+			`,
+			altKey,
+			name,
+			k.Base(),
+			name,
+			k.Type(),
+			name,
+		).ifElseAppendf(
+			defValue != nil,
+			`
+				else {
+					t%s, err := strconv.ParseComplex(%q, %d)
+					if err != nil {
+						return err
+					}
+					%s = %s(t%s)
+				}
+			`,
+			name,
+			sderef(defValue),
+			k.Base(),
+			name,
+			k.Type(),
+			name,
+		)(
+			`
+				else {
+					return errors.New("required cli argument %s hasn't been provided")
+				}
+			`,
+			key,
 		)
 	case gofire.String:
 		return d.appendf(
@@ -365,15 +587,33 @@ func (d *driver) tprimitive(name, key, altKey string, t gofire.TPrimitive) *driv
 			t.Type(),
 			key,
 			name,
+		).ifAppendf(
+			altKey != "",
+			`
+				else if p, ok := tokens[%s]; ok {
+					%s = p
+				}
+			`,
+			altKey,
+			name,
+		).ifElseAppendf(
+			defValue != nil,
+			`
+				else {
+					%s = %q
+				}
+			`,
+			name,
+			sderef(defValue),
+		)(
+			`
+				else {
+					return errors.New("required cli argument %s hasn't been provided")
+				}
+			`,
+			key,
 		)
 	default:
 		panic(fmt.Errorf("type %q can't parsed as primitive type", t.Type()))
 	}
-}
-
-func (d *driver) appendf(format string, a ...interface{}) *driver {
-	if _, err := fmt.Fprintf(d, format, a...); err != nil {
-		panic(err)
-	}
-	return d
 }
