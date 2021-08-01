@@ -43,22 +43,7 @@ func Generate(ctx context.Context, dn DriverName, cmd gofire.Command, w io.Write
 	if err := cmd.Accept(driver); err != nil {
 		return err
 	}
-	funcCall := fmt.Sprintf("%s(%%s)", cmd.Func.Name)
-	if cmd.Func.Context {
-		funcCall = fmt.Sprintf("%s(ctx, %%s)", cmd.Func.Name)
-	}
-	if cmd.Func.Return {
-		funcCall = fmt.Sprintf("return %s", funcCall)
-	} else {
-		funcCall = fmt.Sprintf(
-			`
-				%s
-				return nil
-			`,
-			funcCall,
-		)
-	}
-	funcCall = fmt.Sprintf(funcCall, strings.Join(driver.Parameters(), ","))
+	funcCall, funcRet := funcCallSinnature(cmd, driver.Parameters())
 	src := fmt.Sprintf(
 		`
 			package %s
@@ -67,14 +52,20 @@ func Generate(ctx context.Context, dn DriverName, cmd gofire.Command, w io.Write
 				%s
 			)
 			
-			func Command%s(ctx context.Context) error {
+			func Command%s(ctx context.Context) (%s) {
+				if err = func(ctx context.Context) error {
+					%s
+				}(ctx); err != nil {
+					return
+				}
 				%s
-				%s
+				return
 			}
 		`,
 		cmd.Pckg,
 		strings.Join(driver.Imports(), "\n"),
 		cmd.Func.Name,
+		funcRet,
 		strings.Trim(strip.ReplaceAllString(string(driver.Output()), "\n"), "\n\t "),
 		funcCall,
 	)
@@ -86,4 +77,38 @@ func Generate(ctx context.Context, dn DriverName, cmd gofire.Command, w io.Write
 		return err
 	}
 	return nil
+}
+
+func funcCallSinnature(cmd gofire.Command, params []string) (call string, ret string) {
+	if cmd.Func.Context {
+		call = fmt.Sprintf("%s(ctx, %%s)", cmd.Func.Name)
+	} else {
+		call = fmt.Sprintf("%s(%%s)", cmd.Func.Name)
+	}
+	if len(cmd.Func.Returns) != 0 {
+		rnames := make([]string, 0, len(cmd.Func.Returns))
+		errIndex := -1
+		for i, typ := range cmd.Func.Returns {
+			rnames = append(rnames, fmt.Sprintf("o%d", i))
+			if typ == "error" {
+				errIndex = i
+			}
+		}
+		rtypes := cmd.Func.Returns
+		if errIndex > 0 {
+			rnames[errIndex] = "err"
+			call = fmt.Sprintf("%s = %s", strings.Join(rnames, ","), call)
+		} else {
+			call = fmt.Sprintf("%s = %s", strings.Join(rnames, ","), call)
+			rtypes = append(rnames, "err")
+			rnames = append(rnames, "err")
+		}
+		for i := range rnames {
+			ret += fmt.Sprintf("%s %s,", rnames[i], rtypes[i])
+		}
+	} else {
+		ret = "err error"
+	}
+	call = fmt.Sprintf(call, strings.Join(params, ","))
+	return
 }

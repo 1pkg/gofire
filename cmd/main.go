@@ -16,7 +16,7 @@ func main() {
 		Func: gofire.Function{
 			Name:    "SomeFunc",
 			Context: true,
-			Return:  true,
+			Returns: []string{"int", "string", "error", "string", "error"},
 		},
 		Parameters: []gofire.Parameter{
 			gofire.Flag{

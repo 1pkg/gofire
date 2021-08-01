@@ -53,7 +53,7 @@ func (g Group) Accept(v Visitor) error {
 type Function struct {
 	Name    string
 	Context bool
-	Return  bool
+	Returns []string
 }
 
 type Command struct {
