@@ -13,8 +13,13 @@ import (
 func main() {
 	cmd := gofire.Command{
 		Pckg: "main",
-		Func: gofire.Function{
-			Name:    "SomeFunc",
+		Name: "SomeFunc",
+		Doc: `
+		Some comments here
+		zzzzz
+		aaaaaaaaaaaaa
+		`,
+		Func: gofire.Signature{
 			Context: true,
 			Returns: []string{"int", "string", "error", "string", "error"},
 		},

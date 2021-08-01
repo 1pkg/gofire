@@ -50,8 +50,7 @@ func (g Group) Accept(v Visitor) error {
 	return nil
 }
 
-type Function struct {
-	Name    string
+type Signature struct {
 	Context bool
 	Returns []string
 }
@@ -60,7 +59,7 @@ type Command struct {
 	Name       string
 	Doc        string
 	Pckg       string
-	Func       Function
+	Func       Signature
 	Parameters []Parameter
 }
 

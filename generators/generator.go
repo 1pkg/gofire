@@ -33,17 +33,12 @@ func Register(name DriverName, driver Driver) {
 }
 
 // Generate generates cli command using provided driver to provided writer output.
-func Generate(ctx context.Context, dn DriverName, cmd gofire.Command, w io.Writer) error {
-	driversMu.RLock()
-	driver, ok := drivers[dn]
-	driversMu.RUnlock()
-	if !ok {
-		return fmt.Errorf("unknown driver %q (forgotten import?)", dn)
-	}
-	if err := cmd.Accept(driver); err != nil {
+func Generate(ctx context.Context, driver DriverName, cmd gofire.Command, w io.Writer) error {
+	importStr, parametersStr, driverCode, err := applyDriver(ctx, driver, cmd)
+	if err != nil {
 		return err
 	}
-	funcCall, funcRet := funcCallSinnature(cmd, driver.Parameters())
+	callExpr, retSing, docsStr := funcCallSinnature(cmd)
 	src := fmt.Sprintf(
 		`
 			package %s
@@ -52,6 +47,7 @@ func Generate(ctx context.Context, dn DriverName, cmd gofire.Command, w io.Write
 				%s
 			)
 			
+			%s
 			func Command%s(ctx context.Context) (%s) {
 				if err = func(ctx context.Context) error {
 					%s
@@ -63,11 +59,12 @@ func Generate(ctx context.Context, dn DriverName, cmd gofire.Command, w io.Write
 			}
 		`,
 		cmd.Pckg,
-		strings.Join(driver.Imports(), "\n"),
-		cmd.Func.Name,
-		funcRet,
-		strings.Trim(strip.ReplaceAllString(string(driver.Output()), "\n"), "\n\t "),
-		funcCall,
+		importStr,
+		docsStr,
+		cmd.Name,
+		retSing,
+		driverCode,
+		fmt.Sprintf(callExpr, parametersStr),
 	)
 	b, err := format.Source([]byte(src))
 	if err != nil {
@@ -79,11 +76,28 @@ func Generate(ctx context.Context, dn DriverName, cmd gofire.Command, w io.Write
 	return nil
 }
 
-func funcCallSinnature(cmd gofire.Command, params []string) (call string, ret string) {
+func applyDriver(ctx context.Context, name DriverName, cmd gofire.Command) (imports string, parameters string, out string, err error) {
+	driversMu.RLock()
+	driver, ok := drivers[name]
+	driversMu.RUnlock()
+	if !ok {
+		err = fmt.Errorf("unknown driver %q (forgotten import?)", name)
+		return
+	}
+	if err = cmd.Accept(driver); err != nil {
+		return
+	}
+	imports = strings.Join(driver.Imports(), "\n")
+	parameters = strings.Join(driver.Parameters(), ",")
+	out = strings.Trim(strip.ReplaceAllString(string(driver.Output()), "\n"), "\n\t ")
+	return
+}
+
+func funcCallSinnature(cmd gofire.Command) (call string, ret string, docs string) {
 	if cmd.Func.Context {
-		call = fmt.Sprintf("%s(ctx, %%s)", cmd.Func.Name)
+		call = fmt.Sprintf("%s(ctx, %%s)", cmd.Name)
 	} else {
-		call = fmt.Sprintf("%s(%%s)", cmd.Func.Name)
+		call = fmt.Sprintf("%s(%%s)", cmd.Name)
 	}
 	if len(cmd.Func.Returns) != 0 {
 		rnames := make([]string, 0, len(cmd.Func.Returns))
@@ -97,18 +111,28 @@ func funcCallSinnature(cmd gofire.Command, params []string) (call string, ret st
 		rtypes := cmd.Func.Returns
 		if errIndex > 0 {
 			rnames[errIndex] = "err"
-			call = fmt.Sprintf("%s = %s", strings.Join(rnames, ","), call)
-		} else {
-			call = fmt.Sprintf("%s = %s", strings.Join(rnames, ","), call)
+		}
+		// regenerate here after err return name was updated.
+		call = fmt.Sprintf("%s = %s", strings.Join(rnames, ","), call)
+		if errIndex == 0 {
 			rtypes = append(rnames, "err")
 			rnames = append(rnames, "err")
 		}
 		for i := range rnames {
 			ret += fmt.Sprintf("%s %s,", rnames[i], rtypes[i])
 		}
-	} else {
+	}
+	if len(cmd.Func.Returns) == 0 {
 		ret = "err error"
 	}
-	call = fmt.Sprintf(call, strings.Join(params, ","))
+	doc := strings.Trim(cmd.Doc, "\n\t ")
+	comments := strings.Split(doc, "\n")
+	for i, comment := range comments {
+		comment = strings.Trim(comment, "\t ")
+		if !strings.HasPrefix(comment, "//") {
+			comments[i] = fmt.Sprintf("// %s", comment)
+		}
+	}
+	docs = strings.Join(comments, "\n")
 	return
 }
