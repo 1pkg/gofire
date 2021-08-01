@@ -20,8 +20,10 @@ type driver struct {
 func (d driver) Imports() []string {
 	return []string{
 		`"context"`,
+		`"fmt"`,
 		`"strconv"`,
 		`"strings"`,
+		`"os"`,
 	}
 }
 
@@ -31,6 +33,52 @@ func (d driver) Parameters() []string {
 
 func (d driver) Output() []byte {
 	return d.Bytes()
+}
+
+func (d *driver) Reset() (err error) {
+	defer func() {
+		if v := recover(); v != nil {
+			if verr, ok := v.(error); ok {
+				err = verr
+			}
+		}
+	}()
+	d.Buffer.Reset()
+	d.appendf(`
+		largs := len(os.Args)
+		tokens := make(map[string]string, len(os.Args))
+		var parg string
+		var narg int
+		for i := 0; i < largs; i++ {
+			arg := os.Args[i]
+			argb, pargb := strings.HasPrefix(arg, "-"), strings.HasPrefix(parg, "-")
+			switch {
+				case !argb && !pargb:
+					tokens["a"+strconv.Itoa(narg)] = arg
+					narg++
+				case !argb && pargb:
+					fln := strings.ReplaceAll(parg, "-", "")
+					tokens["f"+fln] = arg
+				case argb && pargb:
+					fln := strings.ReplaceAll(parg, "-", "")
+					tokens["f"+fln] = "true"
+					if i == largs-1 {
+						fln := strings.ReplaceAll(arg, "-", "")
+						tokens["f"+fln] = "true"
+					}
+				case argb && strings.Contains(arg, "="):
+					parts := strings.Split(arg, "-")
+					fln := strings.ReplaceAll(parts[0], "-", "")
+					tokens["f"+fln] = parts[1]
+				case argb && !pargb:
+					continue
+				default:
+					return fmt.Errorf("cli arguments %%v can't be tokenized near %%s %%s", os.Args, parg, arg)
+			}
+			parg = arg
+		}
+	`)
+	return
 }
 
 func (d *driver) VisitArgument(a gofire.Argument) (err error) {
@@ -76,7 +124,7 @@ func (d *driver) typ(name, key string, t gofire.Typ) *driver {
 	case gofire.Map:
 		return d.tmap(name, key, t.(gofire.TMap))
 	default:
-		panic(fmt.Errorf("unknown type %q can't parsed", t.Type()))
+		panic(fmt.Errorf("unknown type %q can't be parsed", t.Type()))
 	}
 }
 

@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	driversMu sync.RWMutex
+	driversMu sync.Mutex
 	drivers   = make(map[DriverName]Driver)
 	strip     = regexp.MustCompile(`\n(\s)+\n`)
 )
@@ -49,8 +49,9 @@ func Generate(ctx context.Context, driver DriverName, cmd gofire.Command, w io.W
 			
 			%s
 			func Command%s(ctx context.Context) (%s) {
-				if err = func(ctx context.Context) error {
+				if err = func(ctx context.Context) (err error) {
 					%s
+					return
 				}(ctx); err != nil {
 					return
 				}
@@ -77,11 +78,14 @@ func Generate(ctx context.Context, driver DriverName, cmd gofire.Command, w io.W
 }
 
 func applyDriver(ctx context.Context, name DriverName, cmd gofire.Command) (imports string, parameters string, out string, err error) {
-	driversMu.RLock()
+	driversMu.Lock()
+	defer driversMu.Unlock()
 	driver, ok := drivers[name]
-	driversMu.RUnlock()
 	if !ok {
 		err = fmt.Errorf("unknown driver %q (forgotten import?)", name)
+		return
+	}
+	if err = driver.Reset(); err != nil {
 		return
 	}
 	if err = cmd.Accept(driver); err != nil {
