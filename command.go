@@ -11,7 +11,6 @@ type Parameter interface {
 
 type Argument struct {
 	Index uint64
-	Doc   string
 	Type  Typ
 }
 
@@ -22,7 +21,6 @@ func (a Argument) Accept(v Visitor) error {
 type Flag struct {
 	Full       string
 	Short      string
-	Prefix     string
 	Doc        string
 	Optional   bool
 	Deprecated bool
@@ -36,9 +34,9 @@ func (f Flag) Accept(v Visitor) error {
 }
 
 type Group struct {
-	Prefix string
-	Doc    string
-	Flags  []Flag
+	Name  string
+	Doc   string
+	Flags []Flag
 }
 
 func (g Group) Accept(v Visitor) error {

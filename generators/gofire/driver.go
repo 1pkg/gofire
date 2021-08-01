@@ -54,7 +54,7 @@ func (d *driver) Reset() (err error) {
 			argb, pargb := strings.HasPrefix(arg, "-"), strings.HasPrefix(parg, "-")
 			switch {
 				case !argb && !pargb:
-					tokens["a"+strconv.Itoa(narg)] = arg
+					 ["a"+strconv.Itoa(narg)] = arg
 					narg++
 				case !argb && pargb:
 					fln := strings.ReplaceAll(parg, "-", "")
@@ -71,7 +71,7 @@ func (d *driver) Reset() (err error) {
 					fln := strings.ReplaceAll(parts[0], "-", "")
 					tokens["f"+fln] = parts[1]
 				case argb && !pargb:
-					continue
+					continue 
 				default:
 					return fmt.Errorf("cli arguments %%v can't be tokenized near %%s %%s", os.Args, parg, arg)
 			}
@@ -82,14 +82,22 @@ func (d *driver) Reset() (err error) {
 }
 
 func (d *driver) VisitArgument(a gofire.Argument) (err error) {
-	return d.visit(fmt.Sprintf("a%d", a.Index), a.Type)
+	return d.visit(fmt.Sprintf("a%d", a.Index), "", a.Type)
 }
 
 func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
-	return d.visit(fmt.Sprintf("f%s", f.Short), f.Type)
+	var gname string
+	if g != nil {
+		gname = g.Name
+	}
+	return d.visit(
+		fmt.Sprintf("f%s%s", gname, f.Full),
+		fmt.Sprintf("f%s%s", gname, f.Short),
+		f.Type,
+	)
 }
 
-func (d *driver) visit(name string, typ gofire.Typ) (err error) {
+func (d *driver) visit(name, altName string, typ gofire.Typ) (err error) {
 	defer func() {
 		if v := recover(); v != nil {
 			if verr, ok := v.(error); ok {
@@ -98,11 +106,11 @@ func (d *driver) visit(name string, typ gofire.Typ) (err error) {
 		}
 	}()
 	d.params = append(d.params, name)
-	d.typ(name, fmt.Sprintf(`"%s"`, name), typ)
+	d.typ(name, fmt.Sprintf(`"%s"`, name), fmt.Sprintf(`"%s"`, altName), typ)
 	return
 }
 
-func (d *driver) typ(name, key string, t gofire.Typ) *driver {
+func (d *driver) typ(name, key, altKey string, t gofire.Typ) *driver {
 	k := t.Kind()
 	switch k {
 	case gofire.Bool:
@@ -115,20 +123,20 @@ func (d *driver) typ(name, key string, t gofire.Typ) *driver {
 		fallthrough
 	case gofire.Complex64, gofire.Complex128:
 		fallthrough
-	case gofire.String, gofire.Interface:
-		return d.tprimitive(name, key, t.(gofire.TPrimitive))
+	case gofire.String:
+		return d.tprimitive(name, key, altKey, t.(gofire.TPrimitive))
 	case gofire.Array:
-		return d.tarray(name, key, t.(gofire.TArray))
+		return d.tarray(name, key, altKey, t.(gofire.TArray))
 	case gofire.Slice:
-		return d.tslice(name, key, t.(gofire.TSlice))
+		return d.tslice(name, key, altKey, t.(gofire.TSlice))
 	case gofire.Map:
-		return d.tmap(name, key, t.(gofire.TMap))
+		return d.tmap(name, key, altKey, t.(gofire.TMap))
 	default:
-		panic(fmt.Errorf("unknown type %q can't be parsed", t.Type()))
+		panic(fmt.Errorf("unknown or ambiguous type %q can't be parsed", t.Type()))
 	}
 }
 
-func (d *driver) tarray(name, key string, t gofire.TArray) *driver {
+func (d *driver) tarray(name, key, altKey string, t gofire.TArray) *driver {
 	vname := fmt.Sprintf("%sv", name)
 	iname := fmt.Sprintf("%si", name)
 	ikey := fmt.Sprintf(`%s + "_" + strconv.Itoa(%s)`, key, iname)
@@ -146,6 +154,7 @@ func (d *driver) tarray(name, key string, t gofire.TArray) *driver {
 	).typ(
 		vname,
 		ikey,
+		altKey,
 		t.ETyp,
 	).appendf(
 		`
@@ -158,7 +167,7 @@ func (d *driver) tarray(name, key string, t gofire.TArray) *driver {
 	)
 }
 
-func (d *driver) tslice(name, key string, t gofire.TSlice) *driver {
+func (d *driver) tslice(name, key, altKey string, t gofire.TSlice) *driver {
 	vname := fmt.Sprintf("%sv", name)
 	iname := fmt.Sprintf("%si", name)
 	ikey := fmt.Sprintf(`%s + "_" + strconv.Itoa(%s)`, key, iname)
@@ -180,6 +189,7 @@ func (d *driver) tslice(name, key string, t gofire.TSlice) *driver {
 	).typ(
 		vname,
 		ikey,
+		altKey,
 		t.ETyp,
 	).appendf(
 		`
@@ -192,7 +202,7 @@ func (d *driver) tslice(name, key string, t gofire.TSlice) *driver {
 	)
 }
 
-func (d *driver) tmap(name, key string, t gofire.TMap) *driver {
+func (d *driver) tmap(name, key, altKey string, t gofire.TMap) *driver {
 	vkname := fmt.Sprintf("%sx", name)
 	vpname := fmt.Sprintf("%sz", name)
 	kname := fmt.Sprintf("%sk", name)
@@ -219,10 +229,12 @@ func (d *driver) tmap(name, key string, t gofire.TMap) *driver {
 	).typ(
 		vkname,
 		kkey,
+		altKey,
 		t.KTyp,
 	).typ(
 		vpname,
 		pkey,
+		altKey,
 		t.VTyp,
 	).appendf(
 		`
@@ -235,14 +247,14 @@ func (d *driver) tmap(name, key string, t gofire.TMap) *driver {
 	)
 }
 
-func (d *driver) tprimitive(name, key string, t gofire.TPrimitive) *driver {
+func (d *driver) tprimitive(name, key, altKey string, t gofire.TPrimitive) *driver {
 	k := t.Kind()
 	switch k {
 	case gofire.Bool:
 		return d.appendf(
 			`
 				var %s %s
-				if p, ok := params[%s]; ok {
+				if p, ok := tokens[%s]; ok {
 					t%s, err := strconv.ParseBool(p)
 					if err != nil {
 						return err
@@ -261,7 +273,7 @@ func (d *driver) tprimitive(name, key string, t gofire.TPrimitive) *driver {
 		return d.appendf(
 			`
 				var %s %s
-				if p, ok := params[%s]; ok {
+				if p, ok := tokens[%s]; ok {
 					t%s, err := strconv.ParseInt(p, 10, %d)
 					if err != nil {
 						return err
@@ -282,7 +294,7 @@ func (d *driver) tprimitive(name, key string, t gofire.TPrimitive) *driver {
 		return d.appendf(
 			`
 				var %s %s
-				if p, ok := params[%s]; ok {
+				if p, ok := tokens[%s]; ok {
 					t%s, err := strconv.ParseUint(p, 10, %d)
 					if err != nil {
 						return err
@@ -303,7 +315,7 @@ func (d *driver) tprimitive(name, key string, t gofire.TPrimitive) *driver {
 		return d.appendf(
 			`
 				var %s %s
-				if p, ok := params[%s]; ok {
+				if p, ok := tokens[%s]; ok {
 					t%s, err := strconv.ParseFloat(p, %d)
 					if err != nil {
 						return err
@@ -324,7 +336,7 @@ func (d *driver) tprimitive(name, key string, t gofire.TPrimitive) *driver {
 		return d.appendf(
 			`
 				var %s %s
-				if p, ok := params[%s]; ok {
+				if p, ok := tokens[%s]; ok {
 					t%s, err := strconv.ParseComplex(p, %d)
 					if err != nil {
 						return err
@@ -341,11 +353,11 @@ func (d *driver) tprimitive(name, key string, t gofire.TPrimitive) *driver {
 			k.Type(),
 			name,
 		)
-	case gofire.String, gofire.Interface:
+	case gofire.String:
 		return d.appendf(
 			`
 				var %s %s
-				if p, ok := params[%s]; ok {
+				if p, ok := tokens[%s]; ok {
 					%s = p
 				}
 			`,
