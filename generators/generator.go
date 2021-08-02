@@ -34,11 +34,12 @@ func Register(name DriverName, driver Driver) {
 
 // Generate generates cli command using provided driver to provided writer output.
 func Generate(ctx context.Context, driver DriverName, cmd gofire.Command, w io.Writer) error {
-	importStr, parametersStr, driverCode, err := applyDriver(ctx, driver, cmd)
+	importStr, parametersStr, definitionsStr, driverCode, err := applyDriver(ctx, driver, cmd)
 	if err != nil {
 		return err
 	}
-	callExpr, retSign, docsStr := callSignature(cmd)
+	callExprTemplate, retSign := callSignature(cmd)
+	callExpr := fmt.Sprintf(callExprTemplate, parametersStr)
 	src := fmt.Sprintf(
 		`
 			package %s
@@ -47,8 +48,8 @@ func Generate(ctx context.Context, driver DriverName, cmd gofire.Command, w io.W
 				%s
 			)
 			
-			%s
 			func Command%s(ctx context.Context) (%s) {
+				%s
 				if err = func(ctx context.Context) (err error) {
 					%s
 					return
@@ -61,11 +62,11 @@ func Generate(ctx context.Context, driver DriverName, cmd gofire.Command, w io.W
 		`,
 		cmd.Pckg,
 		importStr,
-		docsStr,
 		cmd.Name,
 		retSign,
+		definitionsStr,
 		driverCode,
-		fmt.Sprintf(callExpr, parametersStr),
+		callExpr,
 	)
 	b, err := format.Source([]byte(src))
 	if err != nil {
@@ -77,7 +78,7 @@ func Generate(ctx context.Context, driver DriverName, cmd gofire.Command, w io.W
 	return nil
 }
 
-func applyDriver(ctx context.Context, name DriverName, cmd gofire.Command) (imports string, parameters string, out string, err error) {
+func applyDriver(ctx context.Context, name DriverName, cmd gofire.Command) (imports string, parameters string, definitions string, out string, err error) {
 	driversMu.Lock()
 	defer driversMu.Unlock()
 	driver, ok := drivers[name]
@@ -92,51 +93,40 @@ func applyDriver(ctx context.Context, name DriverName, cmd gofire.Command) (impo
 		return
 	}
 	imports = strings.Join(driver.Imports(), "\n")
-	parameters = strings.Join(driver.Parameters(), ",")
+	pnames := make([]string, 0, len(driver.Parameters()))
+	for _, p := range driver.Parameters() {
+		pnames = append(pnames, p.Name)
+	}
+	parameters = strings.Join(pnames, ",")
+	pdefinitions := make([]string, 0, len(driver.Parameters()))
+	for _, p := range driver.Parameters() {
+		pdefinitions = append(pdefinitions, fmt.Sprintf("var %s %s", p.Name, p.Type.Type()))
+	}
+	definitions = strings.Join(pdefinitions, "\n")
+	parameters = strings.Join(pnames, ",")
 	out = strings.Trim(strip.ReplaceAllString(string(driver.Output()), "\n"), "\n\t ")
 	return
 }
 
-func callSignature(cmd gofire.Command) (call string, ret string, docs string) {
+func callSignature(cmd gofire.Command) (callExprTemplate string, retSign string) {
+	// define call expression context param aware template.
 	if cmd.Context {
-		call = fmt.Sprintf("%s(ctx, %%s)", cmd.Name)
+		callExprTemplate = fmt.Sprintf("%s(ctx, %%s)", cmd.Name)
 	} else {
-		call = fmt.Sprintf("%s(%%s)", cmd.Name)
+		callExprTemplate = fmt.Sprintf("%s(%%s)", cmd.Name)
 	}
-	if len(cmd.Returns) != 0 {
-		rnames := make([]string, 0, len(cmd.Returns))
-		errIndex := -1
-		for i, typ := range cmd.Returns {
-			rnames = append(rnames, fmt.Sprintf("o%d", i))
-			if typ == "error" {
-				errIndex = i
-			}
-		}
-		rtypes := cmd.Returns
-		if errIndex > 0 {
-			rnames[errIndex] = "err"
-		}
-		// regenerate here after err return name was updated.
-		call = fmt.Sprintf("%s = %s", strings.Join(rnames, ","), call)
-		if errIndex == 0 {
-			rtypes = append(rnames, "err")
-			rnames = append(rnames, "err")
-		}
-		for i := range rnames {
-			ret += fmt.Sprintf("%s %s,", rnames[i], rtypes[i])
-		}
+	// collect all return call signature param names.
+	rnames := make([]string, 0, len(cmd.Returns))
+	for i := range cmd.Returns {
+		rnames = append(rnames, fmt.Sprintf("o%d", i))
 	}
-	if len(cmd.Returns) == 0 {
-		ret = "err error"
+	// enrich call expression template with collected return call signature params.
+	callExprTemplate = fmt.Sprintf("%s = %s", strings.Join(rnames, ", "), callExprTemplate)
+	// append an extra cmd error to the end of return signature.
+	rtypes := append(cmd.Returns, "error")
+	rnames = append(rnames, "err")
+	for i := range rnames {
+		retSign += fmt.Sprintf("%s %s,", rnames[i], rtypes[i])
 	}
-	doc := strings.Trim(cmd.Doc, "\n\t ")
-	comments := strings.Split(doc, "\n")
-	for i, comment := range comments {
-		comment = strings.Trim(comment, "\t ")
-		if !strings.HasPrefix(comment, "//") {
-			comments[i] = fmt.Sprintf("// %s", comment)
-		}
-	}
-	docs = strings.Join(comments, "\n")
 	return
 }

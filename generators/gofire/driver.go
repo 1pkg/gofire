@@ -14,7 +14,7 @@ func init() {
 
 type driver struct {
 	bytes.Buffer
-	params []string
+	params []generators.Parameter
 }
 
 func (d driver) Imports() []string {
@@ -28,7 +28,7 @@ func (d driver) Imports() []string {
 	}
 }
 
-func (d driver) Parameters() []string {
+func (d driver) Parameters() []generators.Parameter {
 	return d.params
 }
 
@@ -44,6 +44,7 @@ func (d *driver) Reset() (err error) {
 			}
 		}
 	}()
+	// reset the buffer and append cli os.Args parse code.
 	d.Buffer.Reset()
 	d.appendf(
 		`
@@ -115,11 +116,14 @@ func (d *driver) visit(name, altName string, typ gofire.Typ, defValue *string) (
 			}
 		}
 	}()
-	d.params = append(d.params, name)
+	d.params = append(d.params, generators.Parameter{
+		Name: name,
+		Type: typ,
+	})
 	key := fmt.Sprintf("%q", name)
 	// escape alternative key only if it's not empty.
 	var altKey string
-	if altKey != "" {
+	if altName != "" {
 		altKey = fmt.Sprintf("%q", altName)
 	}
 	d.typ(name, key, altKey, typ, defValue)

@@ -8,9 +8,14 @@ const (
 	DriverNameGofire DriverName = "gofire"
 )
 
+type Parameter struct {
+	Name string
+	Type gofire.Typ
+}
+
 type Driver interface {
 	Imports() []string
-	Parameters() []string
+	Parameters() []Parameter
 	Output() []byte
 	Reset() error
 	gofire.Visitor
