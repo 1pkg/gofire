@@ -23,8 +23,16 @@ func main() {
 		Returns: []string{"int", "string", "error", "string", "error"},
 		Parameters: []gofire.Parameter{
 			gofire.Flag{
-				Full:  "names",
-				Short: "nms",
+				Full:  "aiiii",
+				Short: "z",
+				Type: gofire.TPrimitive{
+					TKind: gofire.String,
+				},
+			},
+			gofire.Flag{
+				Full:     "names",
+				Optional: true,
+				Default:  "{1,2,3,4}",
 				Type: gofire.TArray{
 					ETyp: gofire.TPrimitive{
 						TKind: gofire.String,
@@ -40,7 +48,7 @@ func main() {
 					VTyp: gofire.TMap{
 						KTyp: gofire.TPrimitive{TKind: gofire.String},
 						VTyp: gofire.TSlice{
-							ETyp: gofire.TPrimitive{TKind: gofire.Interface},
+							ETyp: gofire.TPrimitive{TKind: gofire.String},
 						},
 					},
 				},

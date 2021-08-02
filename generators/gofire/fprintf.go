@@ -1,6 +1,8 @@
 package gofire
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type fprintf func(format string, a ...interface{}) *driver
 
