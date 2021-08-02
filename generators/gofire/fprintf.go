@@ -6,36 +6,25 @@ import (
 
 type fprintf func(format string, a ...interface{}) *driver
 
-func sderef(value *string) string {
-	if value == nil {
-		return ""
-	}
-	return *value
-}
-
-func (d *driver) ifAppendf(condition bool, format string, a ...interface{}) *driver {
+func (d *driver) ifAppendf(condition bool, f func(fprintf)) *driver {
 	if condition {
-		return d.appendf(format, a...)
+		f(d.appendf)
 	}
 	return d
 }
 
-func (d *driver) ifElseAppendf(condition bool, format string, a ...interface{}) fprintf {
+func (d *driver) ifElseAppendf(condition bool, t func(fprintf), f func(fprintf)) *driver {
 	if condition {
-		d.appendf(format, a...)
-		return d.emptyf
+		t(d.appendf)
 	} else {
-		return d.appendf
+		f(d.appendf)
 	}
+	return d
 }
 
 func (d *driver) appendf(format string, a ...interface{}) *driver {
 	if _, err := fmt.Fprintf(d, format, a...); err != nil {
 		panic(err)
 	}
-	return d
-}
-
-func (d *driver) emptyf(format string, a ...interface{}) *driver {
 	return d
 }

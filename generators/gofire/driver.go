@@ -153,55 +153,26 @@ func (d *driver) typ(name, key, altKey string, t gofire.Typ, defValue *string) *
 }
 
 func (d *driver) tarray(name, key, altKey string, t gofire.TArray, defValue *string) *driver {
-	return d.appendf(
-		`
-			var %s %s
-			{
-				var t string
-				if p, ok := tokens[%s]; ok {
-					t = p
-				} else
-		`,
-		name,
-		t.Type(),
+	return d.tdefinition(name, t.Type()).appendf("{").tdefinition("t", gofire.String.Type()).tassignment(
 		key,
-	).ifAppendf(
-		altKey != "",
-		`
-				if p, ok := tokens[%s]; ok {
-					t = p
-				} else
-		`,
 		altKey,
-	).ifElseAppendf(
-		defValue != nil,
-		`
-				{
-					t = %s
-				}
-		`,
-		sderef(defValue),
-	)(
-		`
-				{
-					return errors.New("required cli argument hasn't been provided")
-				}
-		`,
+		defValue,
+		"t = %s",
 	).appendf(
 		`
-				lp := len(t)
-				if lp <= 2 || t[0] != "{" || t[l-1] != "}" {
-					return errors.New("value can't be parsed as an array")
-				}
-				t = t[1:lp-1]
-				tp := strings.Split(t, ",")
-				ltp := len(tp)
-				if ltp != %d {
-					return errors.New("different array size expected")
-				}
-				tokens := make(map[string]string, ltp)
-				for i := 0; i < ltp; i++ {
-					tokens[strconv.Itoa(i)] = tp[i]
+			lp := len(t)
+			if lp <= 2 || t[0] != '{' || t[lp-1] != '}' {
+				return errors.New("value can't be parsed as an array")
+			}
+			t = t[1:lp-1]
+			tp := strings.Split(t, ",")
+			ltp := len(tp)
+			if ltp != %d {
+				return errors.New("different array size expected")
+			}
+			tokens := make(map[string]string, ltp)
+			for i := 0; i < ltp; i++ {
+				tokens[strconv.Itoa(i)] = tp[i]
 		`,
 		t.Size,
 	).typ(
@@ -212,61 +183,31 @@ func (d *driver) tarray(name, key, altKey string, t gofire.TArray, defValue *str
 		nil,
 	).appendf(
 		`
-					%s[i] = vi
-				}
+				%s[i] = vi
 			}
 		`,
 		name,
-	)
+	).appendf("}")
 }
 
 func (d *driver) tslice(name, key, altKey string, t gofire.TSlice, defValue *string) *driver {
-	return d.appendf(
-		`
-			var %s %s
-			{
-				var t string
-				if p, ok := tokens[%s]; ok {
-					t = p
-				} else
-		`,
-		name,
-		t.Type(),
+	return d.tdefinition(name, t.Type()).appendf("{").tdefinition("t", gofire.String.Type()).tassignment(
 		key,
-	).ifAppendf(
-		altKey != "",
-		`
-				if p, ok := tokens[%s]; ok {
-					t = p
-				} else
-		`,
 		altKey,
-	).ifElseAppendf(
-		defValue != nil,
-		`
-				{
-					t = %s
-				}
-		`,
-		sderef(defValue),
-	)(
-		`
-				{
-					return errors.New("required cli argument hasn't been provided")
-				}
-		`,
+		defValue,
+		"t = %s",
 	).appendf(
 		`
-				lp := len(t)
-				if lp <= 2 || t[0] != "{" || t[l-1] != "}" {
-					return errors.New("value can't be parsed as a slice")
-				}
-				t = t[1:lp-1]
-				tp := strings.Split(t, ",")
-				ltp := len(tp)
-				tokens := make(map[string]string, ltp)
-				for i := 0; i < ltp; i++ {
-					tokens[strconv.Itoa(i)] = tp[i]
+			lp := len(t)
+			if lp <= 2 || t[0] != '{' || t[lp-1] != '}' {
+				return errors.New("value can't be parsed as a slice")
+			}
+			t = t[1:lp-1]
+			tp := strings.Split(t, ",")
+			ltp := len(tp)
+			tokens := make(map[string]string, ltp)
+			for i := 0; i < ltp; i++ {
+				tokens[strconv.Itoa(i)] = tp[i]
 		`,
 	).typ(
 		"vi",
@@ -276,66 +217,36 @@ func (d *driver) tslice(name, key, altKey string, t gofire.TSlice, defValue *str
 		nil,
 	).appendf(
 		`
-					%s[i] = vi
-				}
+				%s[i] = vi
 			}
 		`,
 		name,
-	)
+	).appendf("}")
 }
 
 func (d *driver) tmap(name, key, altKey string, t gofire.TMap, defValue *string) *driver {
-	return d.appendf(
-		`
-			var %s %s
-			{
-				var t string
-				if p, ok := tokens[%s]; ok {
-					t = p
-				} else
-		`,
-		name,
-		t.Type(),
+	return d.tdefinition(name, t.Type()).appendf("{").tdefinition("t", gofire.String.Type()).tassignment(
 		key,
-	).ifAppendf(
-		altKey != "",
-		`
-				if p, ok := tokens[%s]; ok {
-					t = p
-				} else
-		`,
 		altKey,
-	).ifElseAppendf(
-		defValue != nil,
-		`
-				{
-					t = %s
-				}
-		`,
-		sderef(defValue),
-	)(
-		`
-				{
-					return errors.New("required cli argument hasn't been provided")
-				}
-		`,
+		defValue,
+		"t = %s",
 	).appendf(
 		`
-				lp := len(t)
-				if lp <= 2 || t[0] != "{" || t[l-1] != "}" {
-					return errors.New("value can't be parsed as a map")
+			lp := len(t)
+			if lp <= 2 || t[0] != '{' || t[lp-1] != '}' {
+				return errors.New("value can't be parsed as a map")
+			}
+			t = t[1:lp-1]
+			tp := strings.Split(t, ",")
+			ltp := len(tp)
+			tokens := make(map[string]string, ltp)
+			for i := 0; i < ltp; i++ {
+				pi := strings.Split(tp[i], ":")
+				if len(pi) != 2 {
+					return errors.New("value can't be parsed as a map entry")
 				}
-				t = t[1:lp-1]
-				tp := strings.Split(t, ",")
-				ltp := len(tp)
-				tokens := make(map[string]string, ltp)
-				for i := 0; i < ltp; i++ {
-					pi := strings.Split(tp[i], ":")
-					if len(pi) != 2 {
-						return errors.New("value can't be parsed as a map entry")
-					}
-					tokens["k"+strconv.Itoa(i)] = pi[0]
-					tokens["v"+strconv.Itoa(i)] = tp[0]
+				tokens["k"+strconv.Itoa(i)] = pi[0]
+				tokens["v"+strconv.Itoa(i)] = pi[1]
 		`,
 	).typ(
 		"ki",
@@ -351,324 +262,168 @@ func (d *driver) tmap(name, key, altKey string, t gofire.TMap, defValue *string)
 		nil,
 	).appendf(
 		`
-					%s[ki] = vi
-				}
+				%s[ki] = vi
 			}
 		`,
 		name,
-	)
+	).appendf("}")
 }
 
 func (d *driver) tprimitive(name, key, altKey string, t gofire.TPrimitive, defValue *string) *driver {
 	k := t.Kind()
 	switch k {
 	case gofire.Bool:
-		return d.appendf(
-			`
-				var %s %s
-				if p, ok := tokens[%s]; ok {
-					t, err := strconv.ParseBool(p)
-					if err != nil {
-						return err
-					}
-					%s = t
-				} else
-			`,
-			name,
-			t.Type(),
+		return d.tdefinition(name, t.Type()).tassignment(
 			key,
-			name,
-		).ifAppendf(
-			altKey != "",
-			`
-				if p, ok := tokens[%s]; ok {
-					t, err := strconv.ParseBool(p)
-					if err != nil {
-						return err
-					}
-					%s = t
-				} else
-			`,
 			altKey,
-			name,
-		).ifElseAppendf(
-			defValue != nil,
-			`
-				{
-					t, err := strconv.ParseBool(%s)
+			defValue,
+			fmt.Sprintf(
+				`
+					t, err := strconv.ParseBool(%%s)
 					if err != nil {
 						return err
 					}
-					%s = t
-				}
-			`,
-			sderef(defValue),
-			name,
-		)(
-			`
-				{
-					return errors.New("required cli argument hasn't been provided")
-				}
-			`,
+					%s = (t)
+				`,
+				name,
+			),
 		)
 	case gofire.Int, gofire.Int8, gofire.Int16, gofire.Int32, gofire.Int64:
-		return d.appendf(
-			`
-				var %s %s
-				if p, ok := tokens[%s]; ok {
-					t, err := strconv.ParseInt(p, 10, %d)
-					if err != nil {
-						return err
-					}
-					%s = %s(t)
-				} else
-			`,
-			name,
-			t.Type(),
+		return d.tdefinition(name, t.Type()).tassignment(
 			key,
-			k.Base(),
-			name,
-			k.Type(),
-		).ifAppendf(
-			altKey != "",
-			`
-				if p, ok := tokens[%s]; ok {
-					t, err := strconv.ParseInt(p, 10, %d)
-					if err != nil {
-						return err
-					}
-					%s = %s(t)
-				} else
-			`,
 			altKey,
-			k.Base(),
-			name,
-			k.Type(),
-		).ifElseAppendf(
-			defValue != nil,
-			`
-				{
-					t, err := strconv.ParseInt(%s, 10, %d)
+			defValue,
+			fmt.Sprintf(
+				`
+					t, err := strconv.ParseInt(%%s, 10, %d)
 					if err != nil {
 						return err
 					}
 					%s = %s(t)
-				}
-			`,
-			sderef(defValue),
-			k.Base(),
-			name,
-			k.Type(),
-		)(
-			`
-				{
-					return errors.New("required cli argument hasn't been provided")
-				}
-			`,
+				`,
+				k.Base(),
+				name,
+				k.Type(),
+			),
 		)
 	case gofire.Uint, gofire.Uint8, gofire.Uint16, gofire.Uint32, gofire.Uint64:
-		return d.appendf(
-			`
-				var %s %s
-				if p, ok := tokens[%s]; ok {
-					t, err := strconv.ParseUint(p, 10, %d)
-					if err != nil {
-						return err
-					}
-					%s = %s(t)
-				} else
-			`,
-			name,
-			t.Type(),
+		return d.tdefinition(name, t.Type()).tassignment(
 			key,
-			k.Base(),
-			name,
-			k.Type(),
-		).ifAppendf(
-			altKey != "",
-			`
-				if p, ok := tokens[%s]; ok {
-					t, err := strconv.ParseUint(p, 10, %d)
-					if err != nil {
-						return err
-					}
-					%s = %s(t)
-				} else
-			`,
 			altKey,
-			k.Base(),
-			name,
-			k.Type(),
-		).ifElseAppendf(
-			defValue != nil,
-			`
-				{
-					t, err := strconv.ParseUint(%s, 10, %d)
+			defValue,
+			fmt.Sprintf(
+				`
+					t, err := strconv.ParseUint(%%s, 10, %d)
 					if err != nil {
 						return err
 					}
 					%s = %s(t)
-				}
-			`,
-			sderef(defValue),
-			k.Base(),
-			name,
-			k.Type(),
-		)(
-			`
-				{
-					return errors.New("required cli argument hasn't been provided")
-				}
-			`,
+				`,
+				k.Base(),
+				name,
+				k.Type(),
+			),
 		)
 	case gofire.Float32, gofire.Float64:
-		return d.appendf(
-			`
-				var %s %s
-				if p, ok := tokens[%s]; ok {
-					t, err := strconv.ParseFloat(p, %d)
-					if err != nil {
-						return err
-					}
-					%s = %s(t)
-				} else
-			`,
-			name,
-			t.Type(),
+		return d.tdefinition(name, t.Type()).tassignment(
 			key,
-			k.Base(),
-			name,
-			k.Type(),
-		).ifAppendf(
-			altKey != "",
-			`
-				if p, ok := tokens[%s]; ok {
-					t, err := strconv.ParseFloat(p, %d)
-					if err != nil {
-						return err
-					}
-					%s = %s(t)
-				} else
-			`,
 			altKey,
-			k.Base(),
-			name,
-			k.Type(),
-		).ifElseAppendf(
-			defValue != nil,
-			`
-				{
-					t, err := strconv.ParseFloat(%s, %d)
+			defValue,
+			fmt.Sprintf(
+				`
+					t, err := strconv.ParseFloat(%%s, %d)
 					if err != nil {
 						return err
 					}
 					%s = %s(t)
-				}
-			`,
-			sderef(defValue),
-			k.Base(),
-			name,
-			k.Type(),
-		)(
-			`
-				{
-					return errors.New("required cli argument hasn't been provided")
-				}
-			`,
+				`,
+				k.Base(),
+				name,
+				k.Type(),
+			),
 		)
 	case gofire.Complex64, gofire.Complex128:
-		return d.appendf(
-			`
-				var %s %s
-				if p, ok := tokens[%s]; ok {
-					t, err := strconv.ParseComplex(p, %d)
-					if err != nil {
-						return err
-					}
-					%s = %s(t)
-				} else
-			`,
-			t.Type(),
+		return d.tdefinition(name, t.Type()).tassignment(
 			key,
-			name,
-			k.Base(),
-			name,
-			k.Type(),
-		).ifAppendf(
-			altKey != "",
-			`
-				if p, ok := tokens[%s]; ok {
-					t, err := strconv.ParseComplex(p, %d)
-					if err != nil {
-						return err
-					}
-					%s = %s(t)
-				} else
-			`,
 			altKey,
-			k.Base(),
-			name,
-			k.Type(),
-		).ifElseAppendf(
-			defValue != nil,
-			`
-				{
-					t, err := strconv.ParseComplex(%s, %d)
+			defValue,
+			fmt.Sprintf(
+				`
+					t, err := strconv.ParseComplex(%%s, %d)
 					if err != nil {
 						return err
 					}
 					%s = %s(t)
-				}
-			`,
-			sderef(defValue),
-			k.Base(),
-			name,
-			k.Type(),
-		)(
-			`
-				{
-					return errors.New("required cli argument hasn't been provided")
-				}
-			`,
+				`,
+				k.Base(),
+				name,
+				k.Type(),
+			),
 		)
 	case gofire.String:
-		return d.appendf(
-			`
-				var %s %s
-				if p, ok := tokens[%s]; ok {
-					%s = p
-				} else
-			`,
-			name,
-			t.Type(),
+		return d.tdefinition(name, t.Type()).tassignment(
 			key,
-			name,
-		).ifAppendf(
-			altKey != "",
-			`
-				if p, ok := tokens[%s]; ok {
-					%s = p
-				} else
-			`,
 			altKey,
-			name,
-		).ifElseAppendf(
-			defValue != nil,
-			`
-				{
-					%s = %s
-				}
-			`,
-			name,
-			sderef(defValue),
-		)(
-			`
-				{
-					return errors.New("required cli argument hasn't been provided")
-				}
-			`,
+			defValue,
+			fmt.Sprintf("%s = %%s", name),
 		)
 	default:
 		panic(fmt.Errorf("type %q can't parsed as primitive type", t.Type()))
 	}
+}
+
+func (d *driver) tdefinition(name, typ string) *driver {
+	return d.appendf(
+		`
+			var %s %s
+		`,
+		name,
+		typ,
+	)
+}
+
+func (d *driver) tassignment(key, altKey string, defValue *string, assignmentStmt string) *driver {
+	return d.appendf(
+		`
+			if p, ok := tokens[%s]; ok {
+				%s
+			} else
+		`,
+		key,
+		fmt.Sprintf(assignmentStmt, "p"),
+	).ifAppendf(
+		altKey != "",
+		func(f fprintf) {
+			f(
+				`
+					if p, ok := tokens[%s]; ok {
+						%s
+					} else
+				`,
+				altKey,
+				fmt.Sprintf(assignmentStmt, "p"),
+			)
+		},
+	).ifElseAppendf(
+		defValue != nil,
+		func(f fprintf) {
+			f(
+				`
+					{
+						%s
+					}
+				`,
+				fmt.Sprintf(assignmentStmt, *defValue),
+			)
+		},
+		func(f fprintf) {
+			f(
+				`
+					{
+						return errors.New("required cli argument hasn't been provided")
+					}
+				`,
+			)
+		},
+	)
 }
