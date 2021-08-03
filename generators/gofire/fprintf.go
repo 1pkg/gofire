@@ -6,13 +6,6 @@ import (
 
 type fprintf func(format string, a ...interface{}) *driver
 
-func (d *driver) ifAppendf(condition bool, f func(fprintf)) *driver {
-	if condition {
-		f(d.appendf)
-	}
-	return d
-}
-
 func (d *driver) ifElseAppendf(condition bool, t func(fprintf), f func(fprintf)) *driver {
 	if condition {
 		t(d.appendf)
