@@ -14,7 +14,8 @@ func init() {
 
 type driver struct {
 	bytes.Buffer
-	params []generators.Parameter
+	alternatives map[string]string
+	params       []generators.Parameter
 }
 
 func (d driver) Imports() []string {
@@ -46,6 +47,7 @@ func (d *driver) Reset() (err error) {
 	}()
 	// reset the buffer and append cli os.Args parse code.
 	d.Buffer.Reset()
+	d.alternatives = make(map[string]string)
 	d.appendf(
 		`
 			_x0tokens := make(map[string]string, len(os.Args))
@@ -82,7 +84,6 @@ func (d *driver) Reset() (err error) {
 					parg = arg
 				}
 			}
-			_x0alts := make(map[string]string, len(os.Args))
 		`,
 	)
 	return
@@ -127,14 +128,9 @@ func (d *driver) visit(name, altName string, typ gofire.Typ, defValue *string) (
 	// in case alternative name is present add it to alt name lookups.
 	if altName != "" {
 		altKey := fmt.Sprintf("%q", altName)
-		d.appendf(
-			`
-			_x0alts[%s] = %s
-			`,
-			key,
-			altKey,
-		)
+		d.alternatives[key] = altKey
 	}
+	d.appendf(";") // help go parser to tokenize new lines mess.
 	d.typ(name, key, typ, defValue)
 	return
 }
@@ -402,14 +398,20 @@ func (d *driver) tassignment(key string, defValue *string, assignmentStmt string
 		`,
 		key,
 		fmt.Sprintf(assignmentStmt, "p"),
-	).appendf(
-		`
-			if p, ok := _x0tokens[_x0alts[%s]]; ok {
-				%s
-			} else
-		`,
-		key,
-		fmt.Sprintf(assignmentStmt, "p"),
+	).ifElseAppendf(
+		d.alternatives[key] != "",
+		func(f fprintf) {
+			f(
+				`
+					if p, ok := _x0tokens[%s]; ok {
+						%s
+					} else
+				`,
+				d.alternatives[key],
+				fmt.Sprintf(assignmentStmt, "p"),
+			)
+		},
+		func(f fprintf) {},
 	).ifElseAppendf(
 		defValue != nil,
 		func(f fprintf) {

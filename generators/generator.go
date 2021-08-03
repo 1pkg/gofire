@@ -97,13 +97,13 @@ func applyDriver(ctx context.Context, name DriverName, cmd gofire.Command) (impo
 	for _, p := range driver.Parameters() {
 		pnames = append(pnames, p.Name)
 	}
-	parameters = strings.Join(pnames, ",")
+	parameters = strings.Join(pnames, ", ")
 	pdefinitions := make([]string, 0, len(driver.Parameters()))
 	for _, p := range driver.Parameters() {
 		pdefinitions = append(pdefinitions, fmt.Sprintf("var %s %s", p.Name, p.Type.Type()))
 	}
 	definitions = strings.Join(pdefinitions, "\n")
-	parameters = strings.Join(pnames, ",")
+	parameters = strings.Join(pnames, ", ")
 	out = strings.Trim(strip.ReplaceAllString(string(driver.Output()), "\n"), "\n\t ")
 	return
 }
@@ -126,7 +126,7 @@ func callSignature(cmd gofire.Command) (callExprTemplate string, retSign string)
 	rtypes := append(cmd.Returns, "error")
 	rnames = append(rnames, "err")
 	for i := range rnames {
-		retSign += fmt.Sprintf("%s %s,", rnames[i], rtypes[i])
+		retSign += fmt.Sprintf("%s %s, ", rnames[i], rtypes[i])
 	}
 	return
 }
