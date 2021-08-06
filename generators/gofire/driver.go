@@ -33,8 +33,8 @@ func (d driver) Parameters() []generators.Parameter {
 	return d.params
 }
 
-func (d driver) Output() []byte {
-	return d.Bytes()
+func (d driver) Output() ([]byte, error) {
+	return d.Bytes(), nil
 }
 
 func (d *driver) Reset() (err error) {
@@ -89,7 +89,7 @@ func (d *driver) Reset() (err error) {
 	return
 }
 
-func (d *driver) VisitArgument(a gofire.Argument) (err error) {
+func (d *driver) VisitArgument(a gofire.Argument) error {
 	name := fmt.Sprintf("a%d", a.Index)
 	return d.visit(name, "", a.Type, nil)
 }

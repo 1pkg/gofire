@@ -104,7 +104,11 @@ func applyDriver(ctx context.Context, name DriverName, cmd gofire.Command) (impo
 	}
 	definitions = strings.Join(pdefinitions, "\n")
 	parameters = strings.Join(pnames, ", ")
-	out = strings.Trim(strip.ReplaceAllString(string(driver.Output()), "\n"), "\n\t ")
+	bout, err := driver.Output()
+	if err != nil {
+		return
+	}
+	out = strings.Trim(strip.ReplaceAllString(string(bout), "\n"), "\n\t ")
 	return
 }
 

@@ -7,6 +7,7 @@ import (
 
 	"github.com/1pkg/gofire"
 	"github.com/1pkg/gofire/generators"
+	_ "github.com/1pkg/gofire/generators/flag"
 	_ "github.com/1pkg/gofire/generators/gofire.
 )
 
@@ -30,46 +31,54 @@ func main() {
 				},
 			},
 			gofire.Flag{
-				Full:     "names",
-				Optional: true,
-				Default:  "{1,2,3,4}",
-				Type: gofire.TArray{
-					ETyp: gofire.TPrimitive{
-						TKind: gofire.String,
-					},
-					Size: 10,
+				Full:  "aiiiiaa",
+				Short: "ttt",
+				Type: gofire.TPrimitive{
+					TKind: gofire.Uint16,
 				},
+				Default: "100",
 			},
-			gofire.Flag{
-				Full:  "mp",
-				Short: "p",
-				Type: gofire.TMap{
-					KTyp: gofire.TPrimitive{TKind: gofire.Int8},
-					VTyp: gofire.TMap{
-						KTyp: gofire.TPrimitive{TKind: gofire.String},
-						VTyp: gofire.TSlice{
-							ETyp: gofire.TPrimitive{TKind: gofire.String},
-						},
-					},
-				},
-			},
-			gofire.Flag{
-				Full:  "deep",
-				Short: "d",
-				Type: gofire.TSlice{
-					ETyp: gofire.TArray{
-						Size: 1,
-						ETyp: gofire.TSlice{
-							ETyp: gofire.TPrimitive{
-								TKind: gofire.Int64,
-							},
-						},
-					},
-				},
-			},
+			// gofire.Flag{
+			// 	Full:     "names",
+			// 	Optional: true,
+			// 	Default:  "{1,2,3,4}",
+			// 	Type: gofire.TArray{
+			// 		ETyp: gofire.TPrimitive{
+			// 			TKind: gofire.String,
+			// 		},
+			// 		Size: 10,
+			// 	},
+			// },
+			// gofire.Flag{
+			// 	Full:  "mp",
+			// 	Short: "p",
+			// 	Type: gofire.TMap{
+			// 		KTyp: gofire.TPrimitive{TKind: gofire.Int8},
+			// 		VTyp: gofire.TMap{
+			// 			KTyp: gofire.TPrimitive{TKind: gofire.String},
+			// 			VTyp: gofire.TSlice{
+			// 				ETyp: gofire.TPrimitive{TKind: gofire.String},
+			// 			},
+			// 		},
+			// 	},
+			// },
+			// gofire.Flag{
+			// 	Full:  "deep",
+			// 	Short: "d",
+			// 	Type: gofire.TSlice{
+			// 		ETyp: gofire.TArray{
+			// 			Size: 1,
+			// 			ETyp: gofire.TSlice{
+			// 				ETyp: gofire.TPrimitive{
+			// 					TKind: gofire.Int64,
+			// 				},
+			// 			},
+			// 		},
+			// 	},
+			// },
 		},
 	}
-	if err := generators.Generate(context.TODO(), generators.DriverNameGofire, cmd, os.Stdout); err != nil {
+	if err := generators.Generate(context.TODO(), generators.DriverNameFlag, cmd, os.Stdout); err != nil {
 		log.Fatal(err)
 	}
 }

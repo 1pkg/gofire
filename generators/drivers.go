@@ -6,6 +6,7 @@ type DriverName string
 
 const (
 	DriverNameGofire DriverName = "gofire"
+	DriverNameFlag  DriverName = "flag"
 )
 
 type Parameter struct {
@@ -16,7 +17,7 @@ type Parameter struct {
 type Driver interface {
 	Imports() []string
 	Parameters() []Parameter
-	Output() []byte
+	Output() ([]byte, error)
 	Reset() error
 	gofire.Visitor
 }
