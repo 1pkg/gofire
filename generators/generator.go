@@ -92,7 +92,7 @@ func applyDriver(ctx context.Context, name DriverName, cmd gofire.Command) (impo
 	if err = cmd.Accept(driver); err != nil {
 		return
 	}
-	imports = strings.Join(driver.Imports(), "\n")
+	imports = strings.Join(append(driver.Imports(), `"context"`), "\n")
 	pnames := make([]string, 0, len(driver.Parameters()))
 	for _, p := range driver.Parameters() {
 		pnames = append(pnames, p.Name)

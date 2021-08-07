@@ -20,7 +20,6 @@ type driver struct {
 
 func (d driver) Imports() []string {
 	return []string{
-		`"context"`,
 		`"errors"`,
 		`"fmt"`,
 		`"strconv"`,

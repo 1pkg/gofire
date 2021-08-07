@@ -38,6 +38,18 @@ func main() {
 				},
 				Default: "100",
 			},
+			gofire.Argument{
+				Index: 0,
+				Type: gofire.TPrimitive{
+					TKind: gofire.Float32,
+				},
+			},
+			gofire.Argument{
+				Index: 1,
+				Type: gofire.TPrimitive{
+					TKind: gofire.Bool,
+				},
+			},
 			// gofire.Flag{
 			// 	Full:     "names",
 			// 	Optional: true,
