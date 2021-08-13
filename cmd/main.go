@@ -26,15 +26,19 @@ func main() {
 			gofire.Flag{
 				Full:  "aiiii",
 				Short: "z",
-				Type: gofire.TPrimitive{
-					TKind: gofire.String,
+				Type: gofire.TPtr{
+					ETyp: gofire.TPrimitive{
+						TKind: gofire.String,
+					},
 				},
 			},
 			gofire.Flag{
 				Full:  "aiiiiaa",
 				Short: "ttt",
-				Type: gofire.TPrimitive{
-					TKind: gofire.Uint16,
+				Type: gofire.TPtr{
+					ETyp: gofire.TPrimitive{
+						TKind: gofire.Uint16,
+					},
 				},
 				Default: "100",
 			},

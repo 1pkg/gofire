@@ -6,6 +6,7 @@ import (
 	"go/format"
 	"io"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 
@@ -92,7 +93,9 @@ func applyDriver(ctx context.Context, name DriverName, cmd gofire.Command) (impo
 	if err = cmd.Accept(driver); err != nil {
 		return
 	}
-	imports = strings.Join(append(driver.Imports(), `"context"`), "\n")
+	imps := append(driver.Imports(), `"context"`)
+	sort.Strings(imps)
+	imports = strings.Join(imps, "\n")
 	pnames := make([]string, 0, len(driver.Parameters()))
 	for _, p := range driver.Parameters() {
 		pnames = append(pnames, p.Name)
