@@ -39,7 +39,7 @@ func Generate(ctx context.Context, driver DriverName, cmd gofire.Command, w io.W
 	if err != nil {
 		return err
 	}
-	callExprTemplate, retSign := callSignature(cmd)
+	callExprTemplate, resultSignature := callSignature(cmd)
 	callExpr := fmt.Sprintf(callExprTemplate, parametersStr)
 	src := fmt.Sprintf(
 		`
@@ -61,10 +61,10 @@ func Generate(ctx context.Context, driver DriverName, cmd gofire.Command, w io.W
 				return
 			}
 		`,
-		cmd.Pckg,
+		cmd.Package,
 		importStr,
-		cmd.Name,
-		retSign,
+		cmd.Function,
+		resultSignature,
 		definitionsStr,
 		driverCode,
 		callExpr,
@@ -115,25 +115,25 @@ func applyDriver(ctx context.Context, name DriverName, cmd gofire.Command) (impo
 	return
 }
 
-func callSignature(cmd gofire.Command) (callExprTemplate string, retSign string) {
+func callSignature(cmd gofire.Command) (callExprTemplate string, resultSignature string) {
 	// define call expression context param aware template.
 	if cmd.Context {
-		callExprTemplate = fmt.Sprintf("%s(ctx, %%s)", cmd.Name)
+		callExprTemplate = fmt.Sprintf("%s(ctx, %%s)", cmd.Function)
 	} else {
-		callExprTemplate = fmt.Sprintf("%s(%%s)", cmd.Name)
+		callExprTemplate = fmt.Sprintf("%s(%%s)", cmd.Function)
 	}
 	// collect all return call signature param names.
-	rnames := make([]string, 0, len(cmd.Returns))
-	for i := range cmd.Returns {
+	rnames := make([]string, 0, len(cmd.Results))
+	for i := range cmd.Results {
 		rnames = append(rnames, fmt.Sprintf("o%d", i))
 	}
 	// enrich call expression template with collected return call signature params.
 	callExprTemplate = fmt.Sprintf("%s = %s", strings.Join(rnames, ", "), callExprTemplate)
 	// append an extra cmd error to the end of return signature.
-	rtypes := append(cmd.Returns, "error")
+	rtypes := append(cmd.Results, "error")
 	rnames = append(rnames, "err")
 	for i := range rnames {
-		retSign += fmt.Sprintf("%s %s, ", rnames[i], rtypes[i])
+		resultSignature += fmt.Sprintf("%s %s, ", rnames[i], rtypes[i])
 	}
 	return
 }

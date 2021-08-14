@@ -14,15 +14,15 @@ import (
 
 func main() {
 	cmd := gofire.Command{
-		Pckg: "main",
-		Name: "SomeFunc",
+		Package:  "main",
+		Function: "SomeFunc",
 		Doc: `
 		Some comments here
 		zzzzz
 		// aaaaaaaaaaaaa
 		`,
 		Context: true,
-		Returns: []string{"int", "string", "error", "string", "error"},
+		Results: []string{"int", "string", "error", "string", "error"},
 		Parameters: []gofire.Parameter{
 			gofire.Flag{
 				Full:  "aiiii",

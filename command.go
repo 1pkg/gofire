@@ -49,11 +49,11 @@ func (g Group) Accept(v Visitor) error {
 }
 
 type Command struct {
-	Name       string
+	Package    string
+	Function   string
 	Doc        string
-	Pckg       string
 	Context    bool
-	Returns    []string
+	Results    []string
 	Parameters []Parameter
 }
 
