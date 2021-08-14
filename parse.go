@@ -16,13 +16,13 @@ func Parse(ctx context.Context, r io.Reader, function string) (*Command, error) 
 	var buf bytes.Buffer
 	_, err := buf.ReadFrom(r)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ast file can't be read %w", err)
 	}
 	p := parser{buf: buf}
 	fset := token.NewFileSet()
 	f, err := goparser.ParseFile(fset, "", buf, goparser.AllErrors)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ast file can't be parsed %w", err)
 	}
 	var cmd Command
 	cmd.Package = f.Name.Name
@@ -72,18 +72,32 @@ func (p *parser) parameters(fdecl *ast.FuncDecl) (parameters []Parameter, contex
 		typ, err := p.typ(param.Type)
 		if err != nil {
 			p.err = fmt.Errorf(
-				"parameter type %s can't be parsed %w",
-				p.rawType(param.Type.Pos(), param.Type.End()),
+				"parameter %s type can't be parsed %w",
+				p.rawType(param.Pos(), param.End()),
 				err,
 			)
 			return
 		}
-		n := 1
-		if l := len(param.Names); l > 0 {
-			n = l
+		n := len(param.Names)
+		if n == 0 {
+			parameters = append(parameters, Placeholder{Type: typ})
+			continue
 		}
-		// TODO parse arguments and flags separately
 		for i := 0; i < n; i++ {
+			name := param.Names[i].Name
+			if name == "_" {
+				parameters = append(parameters, Placeholder{Type: typ})
+				continue
+			}
+			if ptr, ok := typ.(TPtr); ok {
+				parameters = append(parameters, Flag{
+					Full:     name,
+					Optional: true,
+					Default:  ptr.ETyp.Kind().Default(),
+					Type:     typ,
+				})
+				continue
+			}
 			parameters = append(parameters, Argument{
 				Index: uint64(arg),
 				Type:  typ,

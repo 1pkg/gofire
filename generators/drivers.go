@@ -1,6 +1,10 @@
 package generators
 
-import "github.com/1pkg/gofire"
+import (
+	"fmt"
+
+	"github.com/1pkg/gofire"
+)
 
 type DriverName string
 
@@ -21,4 +25,25 @@ type Driver interface {
 	Output() ([]byte, error)
 	Reset() error
 	gofire.Visitor
+}
+
+type BaseDriver struct {
+	Params []Parameter
+}
+
+func (d *BaseDriver) VisitPlaceholder(p gofire.Placeholder) error {
+	d.Params = append(d.Params, Parameter{
+		Name: fmt.Sprintf("p%d", len(d.Params)),
+		Type: p.Type,
+	})
+	return nil
+}
+
+func (d BaseDriver) Parameters() []Parameter {
+	return d.Params
+}
+
+func (d *BaseDriver) Reset() error {
+	d.Params = nil
+	return nil
 }

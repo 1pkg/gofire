@@ -14,8 +14,8 @@ func init() {
 
 type driver struct {
 	bytes.Buffer
+	generators.BaseDriver
 	alternatives map[string]string
-	params       []generators.Parameter
 }
 
 func (d driver) Imports() []string {
@@ -26,10 +26,6 @@ func (d driver) Imports() []string {
 		`"strings"`,
 		`"os"`,
 	}
-}
-
-func (d driver) Parameters() []generators.Parameter {
-	return d.params
 }
 
 func (d driver) Output() ([]byte, error) {
@@ -45,6 +41,7 @@ func (d *driver) Reset() (err error) {
 		}
 	}()
 	// reset the buffer and append cli os.Args parse code.
+	_ = d.BaseDriver.Reset()
 	d.Buffer.Reset()
 	d.alternatives = make(map[string]string)
 	d.appendf(
@@ -119,7 +116,7 @@ func (d *driver) visit(name, altName string, typ gofire.Typ, defValue *string) (
 			}
 		}
 	}()
-	d.params = append(d.params, generators.Parameter{
+	d.Params = append(d.Params, generators.Parameter{
 		Name: name,
 		Type: typ,
 	})
@@ -374,7 +371,7 @@ func (d *driver) tprimitive(name, key string, t gofire.TPrimitive, defValue *str
 
 func (d *driver) tdefinition(name string, typ gofire.Typ) *driver {
 	// in case it's top level parameter do not add definitions.
-	for _, p := range d.params {
+	for _, p := range d.Params {
 		if p.Name == name && p.Type == typ {
 			return d
 		}

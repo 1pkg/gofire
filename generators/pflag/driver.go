@@ -17,9 +17,9 @@ func init() {
 }
 
 type driver struct {
+	generators.BaseDriver
 	preParse  bytes.Buffer
 	postParse bytes.Buffer
-	params    []generators.Parameter
 }
 
 func (d driver) Imports() []string {
@@ -28,10 +28,6 @@ func (d driver) Imports() []string {
 		`"fmt"`,
 		`"strconv"`,
 	}
-}
-
-func (d driver) Parameters() []generators.Parameter {
-	return d.params
 }
 
 func (d driver) Output() ([]byte, error) {
@@ -49,6 +45,7 @@ func (d driver) Output() ([]byte, error) {
 }
 
 func (d *driver) Reset() error {
+	_ = d.BaseDriver.Reset()
 	d.preParse.Reset()
 	d.postParse.Reset()
 	return nil
@@ -65,7 +62,7 @@ func (d *driver) VisitArgument(a gofire.Argument) error {
 			a.Type.Type(),
 		)
 	}
-	d.params = append(d.params, generators.Parameter{
+	d.Params = append(d.Params, generators.Parameter{
 		Name: name,
 		Type: a.Type,
 	})
@@ -87,7 +84,7 @@ func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 			f.Type.Type(),
 		)
 	}
-	d.params = append(d.params, generators.Parameter{
+	d.Params = append(d.Params, generators.Parameter{
 		Name: name,
 		Type: f.Type,
 	})

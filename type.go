@@ -29,6 +29,9 @@ const (
 	Slice
 	Map
 	Ptr
+	// Kinds bellow are not parsed and not processed by generators
+	// but still defined here for visibility and potentially could be
+	// processed in the future.
 	UnsafePointer
 	Chan
 	Func
@@ -80,6 +83,27 @@ func (k Kind) Type() string {
 		return "ptr"
 	default:
 		return "invalid"
+	}
+}
+
+func (k Kind) Default() string {
+	switch k {
+	case Bool:
+		return "false"
+	case Int, Int8, Int16, Int32, Int64:
+		return "0"
+	case Uint, Uint8, Uint16, Uint32, Uint64:
+		return "0"
+	case Float32, Float64:
+		return "0.0"
+	case Complex64, Complex128:
+		return "0"
+	case String:
+		return ""
+	case Array, Slice, Map:
+		return "{}"
+	default:
+		return "nil"
 	}
 }
 

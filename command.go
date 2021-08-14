@@ -1,12 +1,21 @@
 package gofire
 
 type Visitor interface {
+	VisitPlaceholder(Placeholder) error
 	VisitArgument(Argument) error
 	VisitFlag(Flag, *Group) error
 }
 
 type Parameter interface {
 	Accept(Visitor) error
+}
+
+type Placeholder struct {
+	Type Typ
+}
+
+func (p Placeholder) Accept(v Visitor) error {
+	return v.VisitPlaceholder(p)
 }
 
 type Argument struct {
