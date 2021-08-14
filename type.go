@@ -140,7 +140,7 @@ func (k Kind) Max() interface{} {
 		return math.MaxUint32
 	case Uint64:
 		return uint64(math.MaxUint64)
-	// For all the rest numeric type, probably,
+	// for all the rest numeric type, probably,
 	// it's unresonable to check for overflows anyway.
 	default:
 		return nil

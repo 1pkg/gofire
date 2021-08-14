@@ -7,6 +7,7 @@ type DriverName string
 const (
 	DriverNameGofire DriverName = "gofire"
 	DriverNameFlag  DriverName = "flag"
+	DriverNamePFlag DriverName = "pflag"
 )
 
 type Parameter struct {

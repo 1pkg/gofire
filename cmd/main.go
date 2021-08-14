@@ -9,6 +9,7 @@ import (
 	"github.com/1pkg/gofire/generators"
 	_ "github.com/1pkg/gofire/generators/flag"
 	_ "github.com/1pkg/gofire/generators/gofire.
+	_ "github.com/1pkg/gofire/generators/pflag"
 )
 
 func main() {
@@ -40,7 +41,9 @@ func main() {
 						TKind: gofire.Uint16,
 					},
 				},
-				Default: "100",
+				Default:    "100",
+				Deprecated: true,
+				Doc:        "test",
 			},
 			gofire.Argument{
 				Index: 0,
@@ -94,7 +97,7 @@ func main() {
 			// },
 		},
 	}
-	if err := generators.Generate(context.TODO(), generators.DriverNameFlag, cmd, os.Stdout); err != nil {
+	if err := generators.Generate(context.TODO(), generators.DriverNamePFlag, cmd, os.Stdout); err != nil {
 		log.Fatal(err)
 	}
 }
