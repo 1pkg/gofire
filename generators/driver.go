@@ -20,16 +20,52 @@ type Parameter struct {
 	Type gofire.Typ
 }
 
+type Templater interface {
+	Template(Generator) string
+}
+
 type Driver interface {
+	Templater
+	gofire.Visitor
 	Imports() []string
 	Parameters() []Parameter
-	Output() ([]byte, error)
+	Output() (string, error)
 	Reset() error
-	gofire.Visitor
 }
 
 type Visitor struct {
 	params []Parameter
+	groups map[string]Parameter
+}
+
+func (d *Visitor) Template(g Generator) string {
+	return fmt.Sprintf(
+		`
+			package %s
+
+			import(
+				%s
+			)
+			
+			func Command%s(ctx context.Context) (%s) {
+				%s
+				if err = func(ctx context.Context) (err error) {
+					%%s
+					return
+				}(ctx); err != nil {
+					return
+				}
+				%s
+				return
+			}
+		`,
+		g.Package(),
+		g.Import(),
+		g.Function(),
+		g.Return(),
+		g.Vars(),
+		g.Call(),
+	)
 }
 
 func (d *Visitor) VisitPlaceholder(p gofire.Placeholder) error {
@@ -52,6 +88,10 @@ func (d *Visitor) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 	var gname string
 	if g != nil {
 		gname = g.Name
+		d.groups[gname] = Parameter{
+			Name: fmt.Sprintf("g%s", gname),
+			Type: g.Type,
+		}
 	}
 	name := fmt.Sprintf("f%s%s", gname, f.Full)
 	var alt string
@@ -67,7 +107,11 @@ func (d *Visitor) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 }
 
 func (d Visitor) Parameters() []Parameter {
-	return d.params
+	groups := make([]Parameter, 0, len(d.groups))
+	for _, p := range d.groups {
+		groups = append(groups, p)
+	}
+	return append(d.params, groups...)
 }
 
 func (d *Visitor) Reset() error {

@@ -34,106 +34,103 @@ func Register(name DriverName, driver Driver) {
 }
 
 // Generate generates cli command using provided driver to provided writer output.
-func Generate(ctx context.Context, driver DriverName, cmd gofire.Command, w io.Writer) error {
-	importStr, parametersStr, definitionsStr, driverCode, err := applyDriver(ctx, driver, cmd)
+func Generate(ctx context.Context, drivern DriverName, cmd gofire.Command, w io.Writer) error {
+	driversMu.Lock()
+	driver, ok := drivers[drivern]
+	defer driversMu.Unlock()
+	if !ok {
+		return fmt.Errorf("unknown driver %q (forgotten import?)", drivern)
+	}
+	if err := driver.Reset(); err != nil {
+		return err
+	}
+	if err := cmd.Accept(driver); err != nil {
+		return err
+	}
+	out, err := driver.Output()
 	if err != nil {
 		return err
 	}
-	callExprTemplate, resultSignature := callSignature(cmd)
-	callExpr := fmt.Sprintf(callExprTemplate, parametersStr)
-	src := fmt.Sprintf(
-		`
-			package %s
-
-			import(
-				%s
-			)
-			
-			func Command%s(ctx context.Context) (%s) {
-				%s
-				if err = func(ctx context.Context) (err error) {
-					%s
-					return
-				}(ctx); err != nil {
-					return
-				}
-				%s
-				return
-			}
-		`,
-		cmd.Package,
-		importStr,
-		cmd.Function,
-		resultSignature,
-		definitionsStr,
-		driverCode,
-		callExpr,
-	)
-	b, err := format.Source([]byte(src))
+	g := Generator{driver: driver, cmd: cmd}
+	rsrc := fmt.Sprintf(driver.Template(g), strings.Trim(strip.ReplaceAllString(string(out), "\n"), "\n\t "))
+	src, err := format.Source([]byte(rsrc))
 	if err != nil {
 		return err
 	}
-	if _, err := w.Write(b); err != nil {
+	if _, err := w.Write(src); err != nil {
 		return err
 	}
 	return nil
 }
 
-func applyDriver(ctx context.Context, name DriverName, cmd gofire.Command) (imports string, parameters string, definitions string, out string, err error) {
-	driversMu.Lock()
-	defer driversMu.Unlock()
-	driver, ok := drivers[name]
-	if !ok {
-		err = fmt.Errorf("unknown driver %q (forgotten import?)", name)
-		return
-	}
-	if err = driver.Reset(); err != nil {
-		return
-	}
-	if err = cmd.Accept(driver); err != nil {
-		return
-	}
-	imps := append(driver.Imports(), `"context"`)
-	sort.Strings(imps)
-	imports = strings.Join(imps, "\n")
-	pnames := make([]string, 0, len(driver.Parameters()))
-	for _, p := range driver.Parameters() {
-		pnames = append(pnames, p.Name)
-	}
-	parameters = strings.Join(pnames, ", ")
-	pdefinitions := make([]string, 0, len(driver.Parameters()))
-	for _, p := range driver.Parameters() {
-		pdefinitions = append(pdefinitions, fmt.Sprintf("var %s %s", p.Name, p.Type.Type()))
-	}
-	definitions = strings.Join(pdefinitions, "\n")
-	parameters = strings.Join(pnames, ", ")
-	bout, err := driver.Output()
-	if err != nil {
-		return
-	}
-	out = strings.Trim(strip.ReplaceAllString(string(bout), "\n"), "\n\t ")
-	return
+type Generator struct {
+	driver Driver
+	cmd    gofire.Command
 }
 
-func callSignature(cmd gofire.Command) (callExprTemplate string, resultSignature string) {
+func (g Generator) Package() string {
+	return g.cmd.Package
+}
+
+func (g Generator) Function() string {
+	return g.cmd.Function
+}
+
+func (g Generator) Doc() string {
+	return g.cmd.Doc
+}
+
+func (g Generator) Import() string {
+	imports := append(g.driver.Imports(), `"context"`)
+	sort.Strings(imports)
+	return strings.Join(imports, "\n")
+}
+
+func (g Generator) Return() string {
+	// collect all return call signature param names.
+	rnames := make([]string, 0, len(g.cmd.Results))
+	for i := range g.cmd.Results {
+		rnames = append(rnames, fmt.Sprintf("o%d", i))
+	}
+	// append an extra cmd error to the end of return signature.
+	rtypes := append(g.cmd.Results, "error")
+	rnames = append(rnames, "err")
+	ret := make([]string, 0, len(rnames))
+	for i := range rnames {
+		ret = append(ret, fmt.Sprintf("%s %s", rnames[i], rtypes[i]))
+	}
+	return strings.Join(ret, ", ")
+}
+
+func (g Generator) Parameters() string {
+	parameters := make([]string, 0, len(g.driver.Parameters()))
+	for _, p := range g.driver.Parameters() {
+		parameters = append(parameters, p.Name)
+	}
+	return strings.Join(parameters, ", ")
+}
+
+func (g Generator) Vars() string {
+	vars := make([]string, 0, len(g.driver.Parameters()))
+	for _, p := range g.driver.Parameters() {
+		vars = append(vars, fmt.Sprintf("var %s %s", p.Name, p.Type.Type()))
+	}
+	return strings.Join(vars, "\n")
+}
+
+func (g Generator) Call() string {
 	// define call expression context param aware template.
-	if cmd.Context {
-		callExprTemplate = fmt.Sprintf("%s(ctx, %%s)", cmd.Function)
+	var call string
+	if g.cmd.Context {
+		call = fmt.Sprintf("%s(ctx, %s)", g.cmd.Function, g.Parameters())
 	} else {
-		callExprTemplate = fmt.Sprintf("%s(%%s)", cmd.Function)
+		call = fmt.Sprintf("%s(%s)", g.cmd.Function, g.Parameters())
 	}
 	// collect all return call signature param names.
-	rnames := make([]string, 0, len(cmd.Results))
-	for i := range cmd.Results {
+	rnames := make([]string, 0, len(g.cmd.Results))
+	for i := range g.cmd.Results {
 		rnames = append(rnames, fmt.Sprintf("o%d", i))
 	}
 	// enrich call expression template with collected return call signature params.
-	callExprTemplate = fmt.Sprintf("%s = %s", strings.Join(rnames, ", "), callExprTemplate)
-	// append an extra cmd error to the end of return signature.
-	rtypes := append(cmd.Results, "error")
-	rnames = append(rnames, "err")
-	for i := range rnames {
-		resultSignature += fmt.Sprintf("%s %s, ", rnames[i], rtypes[i])
-	}
-	return
+	return fmt.Sprintf("%s = %s", strings.Join(rnames, ", "), call)
 }

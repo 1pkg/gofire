@@ -29,18 +29,18 @@ func (d driver) Imports() []string {
 	}
 }
 
-func (d driver) Output() ([]byte, error) {
+func (d driver) Output() (string, error) {
 	var buf bytes.Buffer
 	if _, err := buf.Write(d.preParse.Bytes()); err != nil {
-		return nil, err
+		return "", err
 	}
 	if _, err := buf.WriteString("flag.Parse()"); err != nil {
-		return nil, err
+		return "", err
 	}
 	if _, err := buf.Write(d.postParse.Bytes()); err != nil {
-		return nil, err
+		return "", err
 	}
-	return buf.Bytes(), nil
+	return buf.String(), nil
 }
 
 func (d *driver) Reset() error {

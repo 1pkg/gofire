@@ -28,8 +28,8 @@ func (d driver) Imports() []string {
 	}
 }
 
-func (d driver) Output() ([]byte, error) {
-	return d.Bytes(), nil
+func (d driver) Output() (string, error) {
+	return d.String(), nil
 }
 
 func (d *driver) Reset() (err error) {
