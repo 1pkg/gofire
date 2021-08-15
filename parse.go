@@ -8,102 +8,125 @@ import (
 	goparser "go/parser"
 	"go/token"
 	"io/fs"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 )
 
 // Parse tries to parse the function from provided ast into command type.
-func Parse(ctx context.Context, pckg, function string) (*Command, error) {
-	fset := token.NewFileSet()
-	dir, err := goparser.ParseDir(fset, pckg, func(fi fs.FileInfo) bool {
-		return strings.HasSuffix(fi.Name(), "_test.go")
-	}, goparser.AllErrors)
+func Parse(ctx context.Context, dir fs.FS, pckg, function string) (*Command, error) {
+	// Start with parsing actual ast from fs driver.
+	fentries, err := fs.ReadDir(dir, ".")
 	if err != nil {
-		return nil, fmt.Errorf("ast package can't be parsed %w", err)
+		return nil, fmt.Errorf("ast package %s can't be read %w", pckg, err)
 	}
-	_, last := filepath.Split(pckg)
-	pkg, ok := dir[last]
-	if !ok {
-		return nil, fmt.Errorf("ast package %s wasn't found in provided path %s", last, pckg)
-	}
-	p := parser{
-		pckg:    pckg,
-		fset:    fset,
-		buffers: make(map[string]*bytes.Buffer),
-		groups:  make(map[string]Group),
-	}
-	var fdecl *ast.FuncDecl
-	for _, file := range pkg.Files {
-		// Visit all files inide the package to gather raw file buffers.
-		if err := p.regFile(file); err != nil {
-			return nil, fmt.Errorf("file %s ast parsing error %w", file.Name.Name, err)
+	var files []file
+	fset := token.NewFileSet()
+	for _, fentry := range fentries {
+		fname := fentry.Name()
+		if fentry.IsDir() || !strings.HasSuffix(fname, ".go") || !strings.HasSuffix(fname, "_test.go") {
+			continue
 		}
+		b, err := fs.ReadFile(dir, fname)
+		if err != nil {
+			return nil, fmt.Errorf("ast file %s in package %s can't be read %w", fname, pckg, err)
+		}
+		buf := bytes.NewBuffer(b)
+		f, err := goparser.ParseFile(fset, "", buf, goparser.AllErrors)
+		if err != nil {
+			return nil, fmt.Errorf("ast file %s in package %s can't be parsed %w", fname, pckg, err)
+		}
+		if f.Name.Name != pckg {
+			continue
+		}
+		files = append(files, file{fset: fset, fname: fname, ast: f, buf: buf})
+	}
+	// Now as ast is parsed successfully parse it into command.
+	p := make(parser)
+	var fparse func(context.Context) (*Command, error)
+	for _, file := range files {
 		// Visit all types inide the package to build flag groups.
-		for _, decl := range file.Decls {
+		for _, decl := range file.ast.Decls {
 			gdecl, ok := decl.(*ast.GenDecl)
 			if ok {
 				for _, spec := range gdecl.Specs {
 					tspec, ok := spec.(*ast.TypeSpec)
 					if ok {
-						if err := p.regType(tspec); err != nil {
-							return nil, fmt.Errorf("group type %s ast parsing error %w", tspec.Name.Name, err)
+						if err := p.register(file, tspec); err != nil {
+							return nil, fmt.Errorf(
+								"ast file %s in package %s group type %s ast parsing error %w",
+								file.fname,
+								pckg,
+								tspec.Name.Name,
+								err,
+							)
 						}
 					}
 				}
 			}
 			// In case we found function declaration that we need - save it,
 			// we will process it later after the visit loop.
-			if lfdecl, ok := decl.(*ast.FuncDecl); ok && lfdecl.Name.Name == function {
-				fdecl = lfdecl
+			if fdecl, ok := decl.(*ast.FuncDecl); ok && fdecl.Name.Name == function {
+				fparse = func(context.Context) (*Command, error) {
+					var cmd Command
+					cmd.Package = pckg
+					cmd.Function = function
+					cmd.Doc = fdecl.Doc.Text()
+					cmd.Results = p.results(file, fdecl)
+					params, context, err := p.parameters(file, fdecl)
+					if err != nil {
+						return nil, fmt.Errorf(
+							"ast file %s in package %s function %s ast parsing error %w",
+							file.fname,
+							pckg,
+							function,
+							err,
+						)
+					}
+					cmd.Context = context
+					cmd.Parameters = params
+					return &cmd, nil
+				}
 			}
 		}
 	}
-	if fdecl == nil {
-		return nil, fmt.Errorf("function %s can't be found in ast", function)
+	if fparse == nil {
+		return nil, fmt.Errorf("function %s can't be found in ast package %s", function, pckg)
 	}
-	// Than in case the function was found process its declaration.
-	var cmd Command
-	cmd.Package = pkg.Name
-	cmd.Function = function
-	cmd.Doc = fdecl.Doc.Text()
-	cmd.Results = p.results(fdecl)
-	params, context, err := p.parameters(fdecl)
-	if err != nil {
-		return nil, fmt.Errorf("function %s ast parsing error %w", function, err)
-	}
-	cmd.Context = context
-	cmd.Parameters = params
-	return &cmd, nil
-
+	return fparse(ctx)
 }
 
-type parser struct {
-	pckg    string
-	fset    *token.FileSet
-	buffers map[string]*bytes.Buffer
-	groups  map[string]Group
+type file struct {
+	fset  *token.FileSet
+	fname string
+	ast   *ast.File
+	buf   *bytes.Buffer
 }
 
-func (p parser) results(fdecl *ast.FuncDecl) (results []string) {
+func (f file) definition(pos, end token.Pos) string {
+	fpos, fend := f.fset.Position(pos), f.fset.Position(end)
+	return f.buf.String()[fpos.Offset:fend.Offset]
+}
+
+type parser map[string]Group
+
+func (p parser) results(f file, fdecl *ast.FuncDecl) (results []string) {
 	for _, result := range fdecl.Type.Results.List {
-		rawType := p.rawType(result.Type.Pos(), result.Type.End())
+		def := f.definition(result.Type.Pos(), result.Type.End())
 		n := 1
 		if l := len(result.Names); l > 0 {
 			n = l
 		}
 		for i := 0; i < n; i++ {
-			results = append(results, string(rawType))
+			results = append(results, string(def))
 		}
 	}
 	return
 }
 
-func (p *parser) parameters(fdecl *ast.FuncDecl) (parameters []Parameter, context bool, err error) {
+func (p *parser) parameters(f file, fdecl *ast.FuncDecl) (parameters []Parameter, context bool, err error) {
 	var arg uint64
 	for i, param := range fdecl.Type.Params.List {
-		if i == 0 && p.isContext(param.Type) {
+		if i == 0 && p.context(param.Type) {
 			context = true
 			continue
 		}
@@ -134,7 +157,7 @@ func (p *parser) parameters(fdecl *ast.FuncDecl) (parameters []Parameter, contex
 		if terr != nil {
 			err = fmt.Errorf(
 				"parameter %s type can't be parsed %w",
-				p.rawType(param.Pos(), param.End()),
+				f.definition(param.Pos(), param.End()),
 				terr,
 			)
 			return
@@ -172,22 +195,7 @@ func (p *parser) parameters(fdecl *ast.FuncDecl) (parameters []Parameter, contex
 	return
 }
 
-func (p *parser) regFile(f *ast.File) error {
-	full := filepath.Join(p.pckg, f.Name.Name)
-	fr, err := os.Open(full)
-	if err != nil {
-		return fmt.Errorf("error happen on file %s open %w", full, err)
-	}
-	var buf bytes.Buffer
-	_, err = buf.ReadFrom(fr)
-	if err != nil {
-		return fmt.Errorf("error happen on file %s read %w", full, err)
-	}
-	p.buffers[f.Name.Name] = &buf
-	return nil
-}
-
-func (p *parser) regType(tspec *ast.TypeSpec) error {
+func (p *parser) register(f file, tspec *ast.TypeSpec) error {
 	// In case it's not a structure type skip it.
 	stype, ok := tspec.Type.(*ast.StructType)
 	if !ok {
@@ -196,30 +204,38 @@ func (p *parser) regType(tspec *ast.TypeSpec) error {
 	var g Group
 	g.Doc = tspec.Doc.Text()
 	g.Type = TStruct{Typ: g.Name}
-	for _, f := range stype.Fields.List {
+	for _, field := range stype.Fields.List {
 		// In case no flag names provided we can skip the field.
-		if len(f.Names) == 0 {
+		if len(field.Names) == 0 {
 			continue
 		}
-		typ, err := p.typ(f.Type)
+		typ, err := p.typ(field.Type)
 		if err != nil {
-			return err
+			return fmt.Errorf(
+				"field %s type can't be parsed %w",
+				f.definition(field.Pos(), field.End()),
+				err,
+			)
 		}
-		flag, err := p.tagFlag(f.Tag.Value)
+		flag, err := p.tagflag(field.Tag.Value)
 		if err != nil {
-			return err
+			return fmt.Errorf(
+				"field %s tag can't be parsed %w",
+				f.definition(field.Pos(), field.End()),
+				err,
+			)
 		}
 		// Short flag names supported only for single name structure fields.
-		if flag.Short != "" && len(f.Names) > 1 {
+		if flag.Short != "" && len(field.Names) > 1 {
 			return fmt.Errorf(
 				"ambiguous short flag name %s for multiple fields %s",
 				flag.Short,
-				p.rawType(f.Pos(), f.End()),
+				f.definition(field.Pos(), field.End()),
 			)
 		}
-		flag.Doc = f.Doc.Text()
+		flag.Doc = field.Doc.Text()
 		flag.Type = typ
-		for _, name := range f.Names {
+		for _, name := range field.Names {
 			if name.Name == "-" {
 				continue
 			}
@@ -231,17 +247,11 @@ func (p *parser) regType(tspec *ast.TypeSpec) error {
 			g.Flags = append(g.Flags, *flag)
 		}
 	}
-	p.groups[g.Type.Type()] = g
+	(*p)[g.Type.Type()] = g
 	return nil
 }
 
-func (p parser) rawType(pos, end token.Pos) string {
-	fpos, fend := p.fset.Position(pos), p.fset.Position(end)
-	buf := p.buffers[fpos.Filename]
-	return buf.String()[fpos.Offset:fend.Offset]
-}
-
-func (p parser) isContext(tp ast.Expr) bool {
+func (p parser) context(tp ast.Expr) bool {
 	sel, ok := tp.(*ast.SelectorExpr)
 	if ok && sel.Sel.Name == "Context" {
 		ctx, ok := sel.X.(*ast.Ident)
@@ -253,7 +263,7 @@ func (p parser) isContext(tp ast.Expr) bool {
 func (p parser) group(tp ast.Expr) (*Group, bool) {
 	g, ok := tp.(*ast.Ident)
 	if ok {
-		g, ok := p.groups[g.Name]
+		g, ok := p[g.Name]
 		return &g, ok
 	}
 	return nil, false
@@ -297,7 +307,7 @@ func (p parser) typ(tp ast.Expr) (Typ, error) {
 		case String.Type():
 			k = String
 		default:
-			return nil, fmt.Errorf("unsupported primitive type")
+			return nil, fmt.Errorf("unsupported primitive type %s", k.Type())
 		}
 		return TPrimitive{TKind: k}, nil
 	case *ast.ArrayType:
@@ -310,11 +320,11 @@ func (p parser) typ(tp ast.Expr) (Typ, error) {
 		}
 		lit, ok := tt.Len.(*ast.BasicLit)
 		if !ok || lit.Kind != token.INT {
-			return nil, fmt.Errorf("unsupported array size literal type")
+			return nil, fmt.Errorf("unsupported array size literal type %s", lit.Kind.String())
 		}
 		size, err := strconv.ParseInt(lit.Value, 10, 64)
 		if err != nil {
-			return nil, fmt.Errorf("unsupported array size literal value %w", err)
+			return nil, fmt.Errorf("unsupported array size literal value %s %w", lit.Value, err)
 		}
 		return TArray{ETyp: etyp, Size: size}, nil
 	case *ast.MapType:
@@ -338,7 +348,7 @@ func (p parser) typ(tp ast.Expr) (Typ, error) {
 	}
 }
 
-func (p parser) tagFlag(rawTag string) (*Flag, error) {
+func (p parser) tagflag(rawTag string) (*Flag, error) {
 	var f Flag
 	// Skip empty tags they will be transformed into auto flags.
 	if rawTag == "" {
