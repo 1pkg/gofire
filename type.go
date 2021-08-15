@@ -29,13 +29,13 @@ const (
 	Slice
 	Map
 	Ptr
+	Struct
 	// Kinds bellow are not parsed and not processed by generators
 	// but still defined here for visibility and potentially could be
 	// processed in the future.
 	UnsafePointer
 	Chan
 	Func
-	Struct
 	Interface
 )
 
@@ -256,4 +256,16 @@ func (TPtr) Kind() Kind {
 
 func (t TPtr) Type() string {
 	return fmt.Sprintf("*%s", t.ETyp.Type())
+}
+
+type TStruct struct {
+	Typ string
+}
+
+func (TStruct) Kind() Kind {
+	return Struct
+}
+
+func (t TStruct) Type() string {
+	return t.Typ
 }

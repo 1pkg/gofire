@@ -46,6 +46,7 @@ type Group struct {
 	Name  string
 	Doc   string
 	Flags []Flag
+	Type  Typ
 }
 
 func (g Group) Accept(v Visitor) error {

@@ -43,8 +43,9 @@ func Parse(ctx context.Context, r io.Reader, function string) (*Command, error) 
 }
 
 type parser struct {
-	buf bytes.Buffer
-	err error
+	buf    bytes.Buffer
+	groups map[string]Group
+	err    error
 }
 
 func (p parser) results(fdecl *ast.FuncDecl) (results []string) {
@@ -68,7 +69,29 @@ func (p *parser) parameters(fdecl *ast.FuncDecl) (parameters []Parameter, contex
 			context = true
 			continue
 		}
-		// TODO add struct parsing support
+		n := len(param.Names)
+		// Try to parse parameter as one of flag groups first.
+		g, ok := p.group(param.Type)
+		if ok {
+			// Check if we need just a type placeholder instead of rich parameter.
+			if n == 0 {
+				parameters = append(parameters, Placeholder{Type: g.Type})
+				continue
+			}
+			for i := 0; i < n; i++ {
+				name := param.Names[i].Name
+				// Check if we need just a type placeholder instead of rich parameter.
+				if name == "_" {
+					parameters = append(parameters, Placeholder{Type: g.Type})
+					continue
+				}
+				group := *g
+				group.Name = param.Names[i].Name
+				parameters = append(parameters, group)
+			}
+			continue
+		}
+		// If parameter is not a group parse its type.
 		typ, err := p.typ(param.Type)
 		if err != nil {
 			p.err = fmt.Errorf(
@@ -78,17 +101,19 @@ func (p *parser) parameters(fdecl *ast.FuncDecl) (parameters []Parameter, contex
 			)
 			return
 		}
-		n := len(param.Names)
+		// Check if we need just a type placeholder instead of rich parameter.
 		if n == 0 {
 			parameters = append(parameters, Placeholder{Type: typ})
 			continue
 		}
 		for i := 0; i < n; i++ {
 			name := param.Names[i].Name
+			// Check if we need just a type placeholder instead of rich parameter.
 			if name == "_" {
 				parameters = append(parameters, Placeholder{Type: typ})
 				continue
 			}
+			// In case type of parameter is pointer we define it as autoflag.
 			if ptr, ok := typ.(TPtr); ok {
 				parameters = append(parameters, Flag{
 					Full:     name,
@@ -98,6 +123,7 @@ func (p *parser) parameters(fdecl *ast.FuncDecl) (parameters []Parameter, contex
 				})
 				continue
 			}
+			// Otherwise parameter is positional argument.
 			parameters = append(parameters, Argument{
 				Index: uint64(arg),
 				Type:  typ,
@@ -119,6 +145,15 @@ func (p parser) isContext(tp ast.Expr) bool {
 		return ok && ctx.Name == "context"
 	}
 	return false
+}
+
+func (p parser) group(tp ast.Expr) (*Group, bool) {
+	g, ok := tp.(*ast.Ident)
+	if ok {
+		g, ok := p.groups[g.Name]
+		return &g, ok
+	}
+	return nil, false
 }
 
 func (p parser) typ(tp ast.Expr) (Typ, error) {
