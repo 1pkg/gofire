@@ -17,7 +17,7 @@ func init() {
 }
 
 type driver struct {
-	generators.BaseDriver
+	generators.Visitor
 	preParse  bytes.Buffer
 	postParse bytes.Buffer
 }
@@ -45,54 +45,42 @@ func (d driver) Output() ([]byte, error) {
 }
 
 func (d *driver) Reset() error {
-	_ = d.BaseDriver.Reset()
+	_ = d.Visitor.Reset()
 	d.preParse.Reset()
 	d.postParse.Reset()
 	return nil
 }
 
 func (d *driver) VisitArgument(a gofire.Argument) error {
-	name := fmt.Sprintf("a%d", a.Index)
+	if err := d.Visitor.VisitArgument(a); err != nil {
+		return err
+	}
+	p := d.Last()
 	tp, ok := a.Type.(gofire.TPrimitive)
 	if !ok {
 		return fmt.Errorf(
 			"driver %s does not support non primitive argument types but got an argument %s %s",
 			generators.DriverNamePFlag,
-			name,
+			p.Name,
 			a.Type.Type(),
 		)
 	}
-	d.Params = append(d.Params, generators.Parameter{
-		Name: name,
-		Type: a.Type,
-	})
-	return d.argument(name, a.Index, tp)
+	return d.argument(p.Name, a.Index, tp)
 }
 
 func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
-	var gname string
-	if g != nil {
-		gname = g.Name
-	}
-	name := fmt.Sprintf("f%s%s", gname, f.Full)
+	_ = d.Visitor.VisitFlag(f, g)
+	p := d.Last()
 	tp, ok := f.Type.(gofire.TPtr)
 	if !ok {
 		return fmt.Errorf(
 			"driver %s does not support non pointer flag types but got a flag %s %s",
 			generators.DriverNamePFlag,
-			name,
+			p.Name,
 			f.Type.Type(),
 		)
 	}
-	d.Params = append(d.Params, generators.Parameter{
-		Name: name,
-		Type: f.Type,
-	})
-	var short string
-	if f.Short != "" {
-		short = fmt.Sprintf("f%s%s", gname, f.Short)
-	}
-	return d.flag(name, short, tp.ETyp, f.Default, f.Doc, f.Deprecated, f.Hidden)
+	return d.flag(p.Name, p.Alt, tp.ETyp, f.Default, f.Doc, f.Deprecated, f.Hidden)
 }
 
 func (d *driver) argument(name string, index uint64, t gofire.TPrimitive) error {

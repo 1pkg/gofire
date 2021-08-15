@@ -13,8 +13,8 @@ func init() {
 }
 
 type driver struct {
+	generators.Visitor
 	bytes.Buffer
-	generators.BaseDriver
 	alternatives map[string]string
 }
 
@@ -41,7 +41,7 @@ func (d *driver) Reset() (err error) {
 		}
 	}()
 	// reset the buffer and append cli os.Args parse code.
-	_ = d.BaseDriver.Reset()
+	_ = d.Visitor.Reset()
 	d.Buffer.Reset()
 	d.alternatives = make(map[string]string)
 	d.appendf(
@@ -86,29 +86,21 @@ func (d *driver) Reset() (err error) {
 }
 
 func (d *driver) VisitArgument(a gofire.Argument) error {
-	name := fmt.Sprintf("a%d", a.Index)
-	return d.visit(name, "", a.Type, nil)
+	_ = d.Visitor.VisitArgument(a)
+	return d.visit(*d.Last(), nil)
 }
 
 func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
-	var gname string
-	if g != nil {
-		gname = g.Name
-	}
+	_ = d.Visitor.VisitFlag(f, g)
 	var defValue *string
 	if f.Optional {
 		value := fmt.Sprintf("%q", f.Default)
 		defValue = &value
 	}
-	name := fmt.Sprintf("f%s%s", gname, f.Full)
-	var altName string
-	if f.Short != "" {
-		altName = fmt.Sprintf("f%s%s", gname, f.Short)
-	}
-	return d.visit(name, altName, f.Type, defValue)
+	return d.visit(*d.Last(), defValue)
 }
 
-func (d *driver) visit(name, altName string, typ gofire.Typ, defValue *string) (err error) {
+func (d *driver) visit(p generators.Parameter, defValue *string) (err error) {
 	defer func() {
 		if v := recover(); v != nil {
 			if verr, ok := v.(error); ok {
@@ -116,18 +108,14 @@ func (d *driver) visit(name, altName string, typ gofire.Typ, defValue *string) (
 			}
 		}
 	}()
-	d.Params = append(d.Params, generators.Parameter{
-		Name: name,
-		Type: typ,
-	})
-	key := fmt.Sprintf("%q", name)
+	key := fmt.Sprintf("%q", p.Name)
 	// in case alternative name is present add it to alt name lookups.
-	if altName != "" {
-		altKey := fmt.Sprintf("%q", altName)
+	if p.Alt != "" {
+		altKey := fmt.Sprintf("%q", p.Alt)
 		d.alternatives[key] = altKey
 	}
 	d.appendf(";") // help go parser to tokenize new lines mess.
-	d.typ(name, key, typ, defValue)
+	d.typ(p.Name, key, p.Type, defValue)
 	return
 }
 
@@ -371,7 +359,7 @@ func (d *driver) tprimitive(name, key string, t gofire.TPrimitive, defValue *str
 
 func (d *driver) tdefinition(name string, typ gofire.Typ) *driver {
 	// in case it's top level parameter do not add definitions.
-	for _, p := range d.Params {
+	for _, p := range d.Parameters() {
 		if p.Name == name && p.Type == typ {
 			return d
 		}
