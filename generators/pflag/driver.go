@@ -71,16 +71,12 @@ func (d *driver) VisitArgument(a gofire.Argument) error {
 func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 	_ = d.Visitor.VisitFlag(f, g)
 	p := d.Last()
-	tp, ok := f.Type.(gofire.TPtr)
-	if !ok {
-		return fmt.Errorf(
-			"driver %s does not support non pointer flag types but got a flag %s %s",
-			generators.DriverNamePFlag,
-			p.Name,
-			f.Type.Type(),
-		)
+	typ := f.Type
+	tprt, ptr := f.Type.(gofire.TPtr)
+	if !ptr {
+		typ = tprt.ETyp
 	}
-	return d.flag(p.Name, p.Alt, tp.ETyp, f.Default, f.Doc, f.Deprecated, f.Hidden)
+	return d.flag(p.Name, p.Alt, typ, ptr, f.Default, f.Doc, f.Deprecated, f.Hidden)
 }
 
 func (d *driver) argument(name string, index uint64, t gofire.TPrimitive) error {
@@ -203,8 +199,12 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive) error 
 	}
 }
 
-func (d *driver) flag(name, short string, t gofire.Typ, val string, doc string, deprecated, hidden bool) error {
+func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, doc string, deprecated, hidden bool) error {
 	k := t.Kind()
+	var amp string
+	if ptr {
+		amp = "&"
+	}
 	switch k {
 	case gofire.Slice:
 		ts := t.(gofire.TSlice)
@@ -240,13 +240,10 @@ func (d *driver) flag(name, short string, t gofire.Typ, val string, doc string, 
 		if _, err := fmt.Fprintf(
 			&d.postParse,
 			`
-				{
-					v := %s(%s_)
-					%s = &v
-				}
+				%s = %s%s_
 			`,
-			t.Type(),
 			name,
+			amp,
 			name,
 		); err != nil {
 			return err
@@ -284,11 +281,12 @@ func (d *driver) flag(name, short string, t gofire.Typ, val string, doc string, 
 			`
 				{
 					v := %s(%s_)
-					%s = &v
+					%s = %sv
 				}
 			`,
 			t.Type(),
 			name,
+			amp,
 			name,
 		); err != nil {
 			return err
@@ -326,11 +324,12 @@ func (d *driver) flag(name, short string, t gofire.Typ, val string, doc string, 
 			`
 				{
 					v := %s(%s_)
-					%s = &v
+					%s = %sv
 				}
 			`,
 			t.Type(),
 			name,
+			amp,
 			name,
 		); err != nil {
 			return err
@@ -349,7 +348,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, val string, doc string, 
 		if _, err := fmt.Fprintf(&d.preParse,
 			`
 				var %s_ %s
-				flag.%sVarP(&%s_, %q, %s, %f, %q)
+				flag.%sVarP(&%s_, %q, %q, %f, %q)
 			`,
 			name,
 			t.Type(),
@@ -368,11 +367,12 @@ func (d *driver) flag(name, short string, t gofire.Typ, val string, doc string, 
 			`
 				{
 					v := %s(%s_)
-					%s = &v
+					%s = %sv
 				}
 			`,
 			t.Type(),
 			name,
+			amp,
 			name,
 		); err != nil {
 			return err
@@ -390,11 +390,12 @@ func (d *driver) flag(name, short string, t gofire.Typ, val string, doc string, 
 		if _, err := fmt.Fprintf(&d.preParse,
 			`
 				var %s_ string
-				flag.StringVar(&%s_, %q, %q, %q)
+				flag.StringVar(&%s_, %q, %q, %q, %q)
 			`,
 			name,
 			name,
 			name,
+			short,
 			v,
 			doc,
 		); err != nil {
@@ -404,13 +405,10 @@ func (d *driver) flag(name, short string, t gofire.Typ, val string, doc string, 
 		if _, err := fmt.Fprintf(
 			&d.postParse,
 			`
-				{
-					v := %s(%s_)
-					%s = &v
-				}
+				%s = %s%s_
 			`,
-			t.Type(),
 			name,
+			amp,
 			name,
 		); err != nil {
 			return err

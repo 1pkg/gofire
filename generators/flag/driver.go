@@ -68,25 +68,21 @@ func (d *driver) VisitArgument(a gofire.Argument) error {
 func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 	_ = d.Visitor.VisitFlag(f, g)
 	p := d.Last()
-	tp, ok := f.Type.(gofire.TPtr)
+	typ := f.Type
+	tptr, ptr := typ.(gofire.TPtr)
+	if ptr {
+		typ = tptr.ETyp
+	}
+	tprim, ok := typ.(gofire.TPrimitive)
 	if !ok {
 		return fmt.Errorf(
-			"driver %s does not support non pointer to primitive flag types but got a flag %s %s",
+			"driver %s does not support non pointer or non primitive flag types but got a flag %s %s",
 			generators.DriverNameFlag,
 			p.Name,
 			f.Type.Type(),
 		)
 	}
-	tpRef, ok := tp.ETyp.(gofire.TPrimitive)
-	if !ok {
-		return fmt.Errorf(
-			"driver %s does not support non pointer to primitive flag types but got a flag %s %s",
-			generators.DriverNameFlag,
-			p.Name,
-			f.Type.Type(),
-		)
-	}
-	return d.flag(p.Name, tpRef, f.Default, f.Doc)
+	return d.flag(p.Name, tprim, ptr, f.Default, f.Doc)
 }
 
 func (d *driver) argument(name string, index uint64, t gofire.TPrimitive) error {
@@ -209,8 +205,12 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive) error 
 	}
 }
 
-func (d *driver) flag(name string, t gofire.TPrimitive, val string, doc string) error {
+func (d *driver) flag(name string, t gofire.TPrimitive, ptr bool, val string, doc string) error {
 	k := t.Kind()
+	var amp string
+	if ptr {
+		amp = "&"
+	}
 	switch k {
 	case gofire.Bool:
 		v, err := d.parsev(name, t, val)
@@ -239,13 +239,10 @@ func (d *driver) flag(name string, t gofire.TPrimitive, val string, doc string) 
 		if _, err := fmt.Fprintf(
 			&d.postParse,
 			`
-				{
-					v := %s(%s_)
-					%s = &v
-				}
+				%s = %s%s_
 			`,
-			t.Type(),
 			name,
+			amp,
 			name,
 		); err != nil {
 			return err
@@ -285,7 +282,7 @@ func (d *driver) flag(name string, t gofire.TPrimitive, val string, doc string) 
 						return fmt.Errorf("flag %s overflow error: value %%d is out of the range [%%d,  %%d]", %s_, min, max)
 					}
 					v := %s(%s_)
-					%s = &v
+					%s =  %sv
 				}
 			`,
 			k.Min(),
@@ -296,6 +293,7 @@ func (d *driver) flag(name string, t gofire.TPrimitive, val string, doc string) 
 			name,
 			t.Type(),
 			name,
+			amp,
 			name,
 		); err != nil {
 			return err
@@ -335,7 +333,7 @@ func (d *driver) flag(name string, t gofire.TPrimitive, val string, doc string) 
 						return fmt.Errorf("flag %s overflow error: value %%d is out of the range [%%d,  %%d]", %s_, min, max)
 					}
 					v := %s(%s_)
-					%s = &v
+					%s = %sv
 				}
 			`,
 			k.Min(),
@@ -346,6 +344,7 @@ func (d *driver) flag(name string, t gofire.TPrimitive, val string, doc string) 
 			name,
 			t.Type(),
 			name,
+			amp,
 			name,
 		); err != nil {
 			return err
@@ -382,11 +381,12 @@ func (d *driver) flag(name string, t gofire.TPrimitive, val string, doc string) 
 			`
 				{
 					v := %s(%s_)
-					%s = &v
+					%s = %sv
 				}
 			`,
 			t.Type(),
 			name,
+			amp,
 			name,
 		); err != nil {
 			return err
@@ -419,13 +419,10 @@ func (d *driver) flag(name string, t gofire.TPrimitive, val string, doc string) 
 		if _, err := fmt.Fprintf(
 			&d.postParse,
 			`
-				{
-					v := %s(%s_)
-					%s = &v
-				}
+				%s = %s%s_
 			`,
-			t.Type(),
 			name,
+			amp,
 			name,
 		); err != nil {
 			return err
