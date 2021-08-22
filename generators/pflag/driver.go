@@ -73,7 +73,7 @@ func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 	p := d.Last()
 	typ := f.Type
 	tprt, ptr := f.Type.(gofire.TPtr)
-	if !ptr {
+	if ptr {
 		typ = tprt.ETyp
 	}
 	return d.flag(p.Name, p.Alt, typ, ptr, f.Default, f.Doc, f.Deprecated, f.Hidden)
@@ -286,8 +286,8 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 			`,
 			t.Type(),
 			name,
-			amp,
 			name,
+			amp,
 		); err != nil {
 			return err
 		}
@@ -329,8 +329,8 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 			`,
 			t.Type(),
 			name,
-			amp,
 			name,
+			amp,
 		); err != nil {
 			return err
 		}
@@ -372,8 +372,8 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 			`,
 			t.Type(),
 			name,
-			amp,
 			name,
+			amp,
 		); err != nil {
 			return err
 		}

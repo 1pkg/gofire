@@ -293,8 +293,8 @@ func (d *driver) flag(name string, t gofire.TPrimitive, ptr bool, val string, do
 			name,
 			t.Type(),
 			name,
-			amp,
 			name,
+			amp,
 		); err != nil {
 			return err
 		}
@@ -344,8 +344,8 @@ func (d *driver) flag(name string, t gofire.TPrimitive, ptr bool, val string, do
 			name,
 			t.Type(),
 			name,
-			amp,
 			name,
+			amp,
 		); err != nil {
 			return err
 		}
@@ -386,8 +386,8 @@ func (d *driver) flag(name string, t gofire.TPrimitive, ptr bool, val string, do
 			`,
 			t.Type(),
 			name,
-			amp,
 			name,
+			amp,
 		); err != nil {
 			return err
 		}

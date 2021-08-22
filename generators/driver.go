@@ -20,52 +20,18 @@ type Parameter struct {
 	Type gofire.Typ
 }
 
-type Templater interface {
-	Template(Generator) string
-}
-
 type Driver interface {
-	Templater
 	gofire.Visitor
+	Reset() error
 	Imports() []string
 	Parameters() []Parameter
+	Template() string
 	Output() (string, error)
-	Reset() error
 }
 
 type Visitor struct {
 	params []Parameter
 	groups map[string]Parameter
-}
-
-func (d *Visitor) Template(g Generator) string {
-	return fmt.Sprintf(
-		`
-			package %s
-
-			import(
-				%s
-			)
-			
-			func Command%s(ctx context.Context) (%s) {
-				%s
-				if err = func(ctx context.Context) (err error) {
-					%%s
-					return
-				}(ctx); err != nil {
-					return
-				}
-				%s
-				return
-			}
-		`,
-		g.Package(),
-		g.Import(),
-		g.Function(),
-		g.Return(),
-		g.Vars(),
-		g.Call(),
-	)
 }
 
 func (d *Visitor) VisitPlaceholder(p gofire.Placeholder) error {
@@ -106,6 +72,11 @@ func (d *Visitor) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 	return nil
 }
 
+func (d *Visitor) Reset() error {
+	d.params = nil
+	return nil
+}
+
 func (d Visitor) Parameters() []Parameter {
 	groups := make([]Parameter, 0, len(d.groups))
 	for _, p := range d.groups {
@@ -114,15 +85,32 @@ func (d Visitor) Parameters() []Parameter {
 	return append(d.params, groups...)
 }
 
-func (d *Visitor) Reset() error {
-	d.params = nil
-	return nil
-}
-
 func (d Visitor) Last() *Parameter {
 	l := len(d.params)
 	if l == 0 {
 		return nil
 	}
 	return &d.params[l-1]
+}
+
+func (d *Visitor) Template() string {
+	return `
+		package {{.Package}}
+
+		import(
+			{{.Import}}
+		)
+		
+		func Command{{.Function}}(ctx context.Context) ({{.Return}}) {
+			{{.Vars}}
+			if err = func(ctx context.Context) (err error) {
+				{{.Body}}
+				return
+			}(ctx); err != nil {
+				return
+			}
+			{{.Call}}
+			return
+		}
+	`
 }

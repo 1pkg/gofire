@@ -1,6 +1,7 @@
 package generators
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"go/format"
@@ -9,6 +10,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"text/template"
 
 	"github.com/1pkg/gofire"
 )
@@ -51,9 +53,16 @@ func Generate(ctx context.Context, drivern DriverName, cmd gofire.Command, w io.
 	if err != nil {
 		return err
 	}
-	g := Generator{driver: driver, cmd: cmd}
-	rsrc := fmt.Sprintf(driver.Template(g), strings.Trim(strip.ReplaceAllString(string(out), "\n"), "\n\t "))
-	src, err := format.Source([]byte(rsrc))
+	tmpl, err := template.New("gen").Parse(driver.Template())
+	if err != nil {
+		return err
+	}
+	var buf bytes.Buffer
+	g := generator{driver: driver, cmd: cmd, body: string(out)}
+	if err := tmpl.Execute(&buf, g); err != nil {
+		return err
+	}
+	src, err := format.Source([]byte(strings.Trim(strip.ReplaceAllString(buf.String(), "\n"), "\n\t ")))
 	if err != nil {
 		return err
 	}
@@ -63,30 +72,31 @@ func Generate(ctx context.Context, drivern DriverName, cmd gofire.Command, w io.
 	return nil
 }
 
-type Generator struct {
+type generator struct {
 	driver Driver
 	cmd    gofire.Command
+	body   string
 }
 
-func (g Generator) Package() string {
+func (g generator) Package() string {
 	return g.cmd.Package
 }
 
-func (g Generator) Function() string {
+func (g generator) Function() string {
 	return g.cmd.Function
 }
 
-func (g Generator) Doc() string {
+func (g generator) Doc() string {
 	return g.cmd.Doc
 }
 
-func (g Generator) Import() string {
+func (g generator) Import() string {
 	imports := append(g.driver.Imports(), `"context"`)
 	sort.Strings(imports)
 	return strings.Join(imports, "\n")
 }
 
-func (g Generator) Return() string {
+func (g generator) Return() string {
 	// collect all return call signature param names.
 	rnames := make([]string, 0, len(g.cmd.Results))
 	for i := range g.cmd.Results {
@@ -102,7 +112,7 @@ func (g Generator) Return() string {
 	return strings.Join(ret, ", ")
 }
 
-func (g Generator) Parameters() string {
+func (g generator) Parameters() string {
 	parameters := make([]string, 0, len(g.driver.Parameters()))
 	for _, p := range g.driver.Parameters() {
 		parameters = append(parameters, p.Name)
@@ -110,7 +120,7 @@ func (g Generator) Parameters() string {
 	return strings.Join(parameters, ", ")
 }
 
-func (g Generator) Vars() string {
+func (g generator) Vars() string {
 	vars := make([]string, 0, len(g.driver.Parameters()))
 	for _, p := range g.driver.Parameters() {
 		vars = append(vars, fmt.Sprintf("var %s %s", p.Name, p.Type.Type()))
@@ -118,7 +128,11 @@ func (g Generator) Vars() string {
 	return strings.Join(vars, "\n")
 }
 
-func (g Generator) Call() string {
+func (g generator) Body() string {
+	return g.body
+}
+
+func (g generator) Call() string {
 	// define call expression context param aware template.
 	var call string
 	if g.cmd.Context {
