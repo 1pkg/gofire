@@ -6,6 +6,7 @@ import (
 
 	"github.com/1pkg/gofire"
 	"github.com/1pkg/gofire/generators"
+	"github.com/1pkg/gofire/generators/internal"
 )
 
 func init() {
@@ -13,7 +14,7 @@ func init() {
 }
 
 type driver struct {
-	generators.Visitor
+	internal.Driver
 	bytes.Buffer
 	alternatives map[string]string
 }
@@ -41,7 +42,7 @@ func (d *driver) Reset() (err error) {
 		}
 	}()
 	// reset the buffer and append cli os.Args parse code.
-	_ = d.Visitor.Reset()
+	_ = d.Driver.Reset()
 	d.Buffer.Reset()
 	d.alternatives = make(map[string]string)
 	d.appendf(
@@ -86,12 +87,12 @@ func (d *driver) Reset() (err error) {
 }
 
 func (d *driver) VisitArgument(a gofire.Argument) error {
-	_ = d.Visitor.VisitArgument(a)
+	_ = d.Driver.VisitArgument(a)
 	return d.visit(*d.Last(), nil)
 }
 
 func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
-	_ = d.Visitor.VisitFlag(f, g)
+	_ = d.Driver.VisitFlag(f, g)
 	var defValue *string
 	if f.Optional {
 		value := fmt.Sprintf("%q", f.Default)

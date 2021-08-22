@@ -7,6 +7,7 @@ import (
 
 	"github.com/1pkg/gofire"
 	"github.com/1pkg/gofire/generators"
+	"github.com/1pkg/gofire/generators/internal"
 )
 
 // TODO override flag.Usage function with command documentation.
@@ -16,7 +17,7 @@ func init() {
 }
 
 type driver struct {
-	generators.Visitor
+	internal.Driver
 	preParse  bytes.Buffer
 	postParse bytes.Buffer
 }
@@ -44,14 +45,14 @@ func (d driver) Output() (string, error) {
 }
 
 func (d *driver) Reset() error {
-	_ = d.Visitor.Reset()
+	_ = d.Driver.Reset()
 	d.preParse.Reset()
 	d.postParse.Reset()
 	return nil
 }
 
 func (d *driver) VisitArgument(a gofire.Argument) error {
-	_ = d.Visitor.VisitArgument(a)
+	_ = d.Driver.VisitArgument(a)
 	p := d.Last()
 	tp, ok := a.Type.(gofire.TPrimitive)
 	if !ok {
@@ -66,7 +67,7 @@ func (d *driver) VisitArgument(a gofire.Argument) error {
 }
 
 func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
-	_ = d.Visitor.VisitFlag(f, g)
+	_ = d.Driver.VisitFlag(f, g)
 	p := d.Last()
 	typ := f.Type
 	tptr, ptr := typ.(gofire.TPtr)
