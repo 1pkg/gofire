@@ -23,7 +23,7 @@ func Parse(ctx context.Context, dir fs.FS, pckg, function string) (*Command, err
 	fset := token.NewFileSet()
 	for _, fentry := range fentries {
 		fname := fentry.Name()
-		if fentry.IsDir() || !strings.HasSuffix(fname, ".go") || !strings.HasSuffix(fname, "_test.go") {
+		if fentry.IsDir() || !strings.HasSuffix(fname, ".go") || strings.HasSuffix(fname, "_test.go") {
 			continue
 		}
 		b, err := fs.ReadFile(dir, fname)
@@ -31,7 +31,7 @@ func Parse(ctx context.Context, dir fs.FS, pckg, function string) (*Command, err
 			return nil, fmt.Errorf("ast file %s in package %s can't be read %w", fname, pckg, err)
 		}
 		buf := bytes.NewBuffer(b)
-		f, err := goparser.ParseFile(fset, "", buf, goparser.AllErrors)
+		f, err := goparser.ParseFile(fset, "", buf, goparser.AllErrors|goparser.ParseComments)
 		if err != nil {
 			return nil, fmt.Errorf("ast file %s in package %s can't be parsed %w", fname, pckg, err)
 		}
@@ -51,7 +51,7 @@ func Parse(ctx context.Context, dir fs.FS, pckg, function string) (*Command, err
 				for _, spec := range gdecl.Specs {
 					tspec, ok := spec.(*ast.TypeSpec)
 					if ok {
-						if err := p.register(file, tspec); err != nil {
+						if err := p.register(file, gdecl, tspec); err != nil {
 							return nil, fmt.Errorf(
 								"ast file %s in package %s group type %s ast parsing error %w",
 								file.fname,
@@ -65,12 +65,13 @@ func Parse(ctx context.Context, dir fs.FS, pckg, function string) (*Command, err
 			}
 			// In case we found function declaration that we need - save it,
 			// we will process it later after the visit loop.
+			file := file
 			if fdecl, ok := decl.(*ast.FuncDecl); ok && fdecl.Name.Name == function {
 				fparse = func(context.Context) (*Command, error) {
 					var cmd Command
 					cmd.Package = pckg
 					cmd.Function = function
-					cmd.Doc = fdecl.Doc.Text()
+					cmd.Doc = strings.TrimSpace(fdecl.Doc.Text())
 					cmd.Results = p.results(file, fdecl)
 					params, context, err := p.parameters(file, fdecl)
 					if err != nil {
@@ -110,7 +111,11 @@ func (f file) definition(pos, end token.Pos) string {
 type parser map[string]Group
 
 func (p parser) results(f file, fdecl *ast.FuncDecl) (results []string) {
-	for _, result := range fdecl.Type.Results.List {
+	var list []*ast.Field
+	if fdecl.Type.Results != nil {
+		list = fdecl.Type.Results.List
+	}
+	for _, result := range list {
 		def := f.definition(result.Type.Pos(), result.Type.End())
 		n := 1
 		if l := len(result.Names); l > 0 {
@@ -195,14 +200,19 @@ func (p *parser) parameters(f file, fdecl *ast.FuncDecl) (parameters []Parameter
 	return
 }
 
-func (p *parser) register(f file, tspec *ast.TypeSpec) error {
+func (p *parser) register(f file, gendecl *ast.GenDecl, tspec *ast.TypeSpec) error {
 	// In case it's not a structure type skip it.
 	stype, ok := tspec.Type.(*ast.StructType)
 	if !ok {
 		return nil
 	}
 	var g Group
-	g.Doc = tspec.Doc.Text()
+	g.Name = tspec.Name.Name
+	if tspec.Doc != nil {
+		g.Doc = strings.TrimSpace(tspec.Doc.Text())
+	} else {
+		g.Doc = strings.TrimSpace(gendecl.Doc.Text())
+	}
 	g.Type = TStruct{Typ: g.Name}
 	for _, field := range stype.Fields.List {
 		// In case no flag names provided we can skip the field.
@@ -217,7 +227,11 @@ func (p *parser) register(f file, tspec *ast.TypeSpec) error {
 				err,
 			)
 		}
-		flag, err := p.tagflag(field.Tag.Value)
+		var tag string
+		if field.Tag != nil {
+			tag = field.Tag.Value
+		}
+		flag, set, err := p.tagflag(tag)
 		if err != nil {
 			return fmt.Errorf(
 				"field %s tag can't be parsed %w",
@@ -233,15 +247,16 @@ func (p *parser) register(f file, tspec *ast.TypeSpec) error {
 				f.definition(field.Pos(), field.End()),
 			)
 		}
-		flag.Doc = field.Doc.Text()
+		flag.Doc = strings.TrimSpace(field.Doc.Text())
 		flag.Type = typ
 		for _, name := range field.Names {
-			if name.Name == "-" {
+			if name.Name == "_" {
 				continue
 			}
 			flag.Full = name.Name
-			// Fix broken default in case it wasn't set.
-			if flag.Default == "" {
+			// Fix broken default in case the flag wasn't set.
+			if !set {
+				flag.Optional = true
 				flag.Default = flag.Type.Kind().Default()
 			}
 			g.Flags = append(g.Flags, *flag)
@@ -348,12 +363,13 @@ func (p parser) typ(tp ast.Expr) (Typ, error) {
 	}
 }
 
-func (p parser) tagflag(rawTag string) (*Flag, error) {
+func (p parser) tagflag(rawTag string) (*Flag, bool, error) {
 	var f Flag
 	// Skip empty tags they will be transformed into auto flags.
 	if rawTag == "" {
-		return &f, nil
+		return &f, false, nil
 	}
+	rawTag = strings.Trim(rawTag, "`")
 	tags := strings.Split(rawTag, " ")
 	for _, ftag := range tags {
 		parts := strings.Split(ftag, ":")
@@ -362,21 +378,21 @@ func (p parser) tagflag(rawTag string) (*Flag, error) {
 		}
 		// Skip omitted tags they will be transformed into auto flags.
 		if parts[1] == `"-"` {
-			return &f, nil
+			return &f, false, nil
 		}
 		tags := strings.Split(strings.Trim(parts[1], `"`), ",")
 		for _, tag := range tags {
 			tv := strings.Split(tag, "=")
 			ltv := len(tv)
 			if ltv > 2 {
-				return nil, fmt.Errorf("can't parse tag %s as key=value pair in %s", tag, rawTag)
+				return nil, false, fmt.Errorf("can't parse tag %s as key=value pair in %s", tag, rawTag)
 			}
 			// Validate key/values and parse the value.
 			var val interface{}
 			switch tv[0] {
 			case "short", "default":
 				if ltv != 2 {
-					return nil, fmt.Errorf(
+					return nil, false, fmt.Errorf(
 						"can't parse tag %s missing %q key value in %s",
 						tag,
 						tv[0],
@@ -391,7 +407,7 @@ func (p parser) tagflag(rawTag string) (*Flag, error) {
 				} else {
 					valb, err := strconv.ParseBool(tv[1])
 					if err != nil {
-						return nil, fmt.Errorf(
+						return nil, false, fmt.Errorf(
 							"can't parse tag %s as boolean for %q key and %s value in %s",
 							tag,
 							tv[0],
@@ -402,7 +418,7 @@ func (p parser) tagflag(rawTag string) (*Flag, error) {
 					val = valb
 				}
 			default:
-				return nil, fmt.Errorf(
+				return nil, false, fmt.Errorf(
 					"can't parse tag %s unknown %q key in %s",
 					tag,
 					tv[0],
@@ -414,7 +430,7 @@ func (p parser) tagflag(rawTag string) (*Flag, error) {
 			case "short":
 				f.Short = val.(string)
 			case "default":
-				f.Short = val.(string)
+				f.Default = val.(string)
 			case "optional":
 				f.Optional = val.(bool)
 			case "deprecated":
@@ -423,6 +439,7 @@ func (p parser) tagflag(rawTag string) (*Flag, error) {
 				f.Hidden = val.(bool)
 			}
 		}
+		return &f, true, nil
 	}
-	return &f, nil
+	return &f, false, nil
 }
