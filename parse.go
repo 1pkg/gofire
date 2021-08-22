@@ -17,7 +17,7 @@ func Parse(ctx context.Context, dir fs.FS, pckg, function string) (*Command, err
 	// Start with parsing actual ast from fs driver.
 	fentries, err := fs.ReadDir(dir, ".")
 	if err != nil {
-		return nil, fmt.Errorf("ast package %s can't be read %w", pckg, err)
+		return nil, fmt.Errorf("ast package %s can't be read, %w", pckg, err)
 	}
 	var files []file
 	fset := token.NewFileSet()
@@ -28,12 +28,12 @@ func Parse(ctx context.Context, dir fs.FS, pckg, function string) (*Command, err
 		}
 		b, err := fs.ReadFile(dir, fname)
 		if err != nil {
-			return nil, fmt.Errorf("ast file %s in package %s can't be read %w", fname, pckg, err)
+			return nil, fmt.Errorf("ast file %s in package %s can't be read, %w", fname, pckg, err)
 		}
 		buf := bytes.NewBuffer(b)
 		f, err := goparser.ParseFile(fset, "", buf, goparser.AllErrors|goparser.ParseComments)
 		if err != nil {
-			return nil, fmt.Errorf("ast file %s in package %s can't be parsed %w", fname, pckg, err)
+			return nil, fmt.Errorf("ast file %s in package %s can't be parsed, %w", fname, pckg, err)
 		}
 		if f.Name.Name != pckg {
 			continue
@@ -53,7 +53,7 @@ func Parse(ctx context.Context, dir fs.FS, pckg, function string) (*Command, err
 					if ok {
 						if err := p.register(file, gdecl, tspec); err != nil {
 							return nil, fmt.Errorf(
-								"ast file %s in package %s group type %s ast parsing error %w",
+								"ast file %s in package %s group type %s ast parsing error, %w",
 								file.fname,
 								pckg,
 								tspec.Name.Name,
@@ -76,7 +76,7 @@ func Parse(ctx context.Context, dir fs.FS, pckg, function string) (*Command, err
 					params, context, err := p.parameters(file, fdecl)
 					if err != nil {
 						return nil, fmt.Errorf(
-							"ast file %s in package %s function %s ast parsing error %w",
+							"ast file %s in package %s function %s ast parsing error, %w",
 							file.fname,
 							pckg,
 							function,
@@ -130,7 +130,11 @@ func (p parser) results(f file, fdecl *ast.FuncDecl) (results []string) {
 
 func (p *parser) parameters(f file, fdecl *ast.FuncDecl) (parameters []Parameter, context bool, err error) {
 	var arg uint64
-	for i, param := range fdecl.Type.Params.List {
+	var list []*ast.Field
+	if fdecl.Type.Params != nil {
+		list = fdecl.Type.Params.List
+	}
+	for i, param := range list {
 		if i == 0 && p.context(param.Type) {
 			context = true
 			continue
@@ -161,7 +165,7 @@ func (p *parser) parameters(f file, fdecl *ast.FuncDecl) (parameters []Parameter
 		typ, terr := p.typ(param.Type)
 		if terr != nil {
 			err = fmt.Errorf(
-				"parameter %s type can't be parsed %w",
+				"parameter %s type can't be parsed, %w",
 				f.definition(param.Pos(), param.End()),
 				terr,
 			)
@@ -215,14 +219,14 @@ func (p *parser) register(f file, gendecl *ast.GenDecl, tspec *ast.TypeSpec) err
 	}
 	g.Type = TStruct{Typ: g.Name}
 	for _, field := range stype.Fields.List {
-		// In case no flag names provided we can skip the field.
+		// In case no flag names provided we can skip the embedded field.
 		if len(field.Names) == 0 {
 			continue
 		}
 		typ, err := p.typ(field.Type)
 		if err != nil {
 			return fmt.Errorf(
-				"field %s type can't be parsed %w",
+				"field %s type can't be parsed, %w",
 				f.definition(field.Pos(), field.End()),
 				err,
 			)
@@ -234,7 +238,7 @@ func (p *parser) register(f file, gendecl *ast.GenDecl, tspec *ast.TypeSpec) err
 		flag, set, err := p.tagflag(tag)
 		if err != nil {
 			return fmt.Errorf(
-				"field %s tag can't be parsed %w",
+				"field %s tag can't be parsed, %w",
 				f.definition(field.Pos(), field.End()),
 				err,
 			)
@@ -339,7 +343,7 @@ func (p parser) typ(tp ast.Expr) (Typ, error) {
 		}
 		size, err := strconv.ParseInt(lit.Value, 10, 64)
 		if err != nil {
-			return nil, fmt.Errorf("unsupported array size literal value %s %w", lit.Value, err)
+			return nil, fmt.Errorf("unsupported array size literal value %s", lit.Value)
 		}
 		return TArray{ETyp: etyp, Size: size}, nil
 	case *ast.MapType:
@@ -419,7 +423,7 @@ func (p parser) tagflag(rawTag string) (*Flag, bool, error) {
 				}
 			default:
 				return nil, false, fmt.Errorf(
-					"can't parse tag %s unknown %q key in %s",
+					"can't parse tag %s unsupported %q key in %s",
 					tag,
 					tv[0],
 					rawTag,
