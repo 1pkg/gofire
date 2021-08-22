@@ -88,6 +88,46 @@ func TestParse(t *testing.T) {
 			function: "bar",
 			err:      errors.New("ast file file.go in package foo can't be parsed, 4:24: expected ';', found '|'"),
 		},
+		"error in reading fs dir should produce expected error": {
+			ctx: context.TODO(),
+			dir: fsmock{MapFS: fstest.MapFS{
+				"file.go": {
+					Data: escapeGO(`
+						package foo
+
+						import "context"
+
+						// bar function doc.
+						func bar(ctx context.Context, a int8, _ uint, b *string, c *float32, d *float64) int {
+							return 0
+						}
+					`),
+				},
+			}, dirErr: errors.New("test error")},
+			pckg:     "foo",
+			function: "bar",
+			err:      errors.New("ast package foo fs dir can't be read, test error"),
+		},
+		"error in reading fs file should produce expected error": {
+			ctx: context.TODO(),
+			dir: fsmock{MapFS: fstest.MapFS{
+				"file.go": {
+					Data: escapeGO(`
+						package foo
+
+						import "context"
+
+						// bar function doc.
+						func bar(ctx context.Context, a int8, _ uint, b *string, c *float32, d *float64) int {
+							return 0
+						}
+					`),
+				},
+			}, fileErr: errors.New("test error")},
+			pckg:     "foo",
+			function: "bar",
+			err:      errors.New("ast file file.go in package foo fs file can't be read, test error"),
+		},
 		"valid go package with valid function definition should produce expected command": {
 			ctx: context.TODO(),
 			dir: fstest.MapFS{
@@ -476,4 +516,20 @@ func TestParse(t *testing.T) {
 			}
 		})
 	}
+}
+
+type fsmock struct {
+	fstest.MapFS
+	fileErr error
+	dirErr  error
+}
+
+func (fsm fsmock) ReadFile(name string) ([]byte, error) {
+	f, _ := fsm.MapFS.ReadFile(name)
+	return f, fsm.fileErr
+}
+
+func (fsm fsmock) ReadDir(name string) ([]fs.DirEntry, error) {
+	dir, _ := fsm.MapFS.ReadDir(name)
+	return dir, fsm.dirErr
 }

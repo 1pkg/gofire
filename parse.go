@@ -17,7 +17,7 @@ func Parse(ctx context.Context, dir fs.FS, pckg, function string) (*Command, err
 	// Start with parsing actual ast from fs driver.
 	fentries, err := fs.ReadDir(dir, ".")
 	if err != nil {
-		return nil, fmt.Errorf("ast package %s can't be read, %w", pckg, err)
+		return nil, fmt.Errorf("ast package %s fs dir can't be read, %w", pckg, err)
 	}
 	var files []file
 	fset := token.NewFileSet()
@@ -28,7 +28,7 @@ func Parse(ctx context.Context, dir fs.FS, pckg, function string) (*Command, err
 		}
 		b, err := fs.ReadFile(dir, fname)
 		if err != nil {
-			return nil, fmt.Errorf("ast file %s in package %s can't be read, %w", fname, pckg, err)
+			return nil, fmt.Errorf("ast file %s in package %s fs file can't be read, %w", fname, pckg, err)
 		}
 		buf := bytes.NewBuffer(b)
 		f, err := goparser.ParseFile(fset, "", buf, goparser.AllErrors|goparser.ParseComments)
