@@ -20,9 +20,15 @@ func (d *Driver) VisitPlaceholder(p gofire.Placeholder) error {
 }
 
 func (d *Driver) VisitArgument(a gofire.Argument) error {
+	// For ellipsis argument we need to produce slice like parameter.
+	typ := a.Type
+	if a.Ellipsis {
+		typ = gofire.TSlice{ETyp: typ}
+	}
 	d.params = append(d.params, generators.Parameter{
-		Name: fmt.Sprintf("a%d", a.Index),
-		Type: a.Type,
+		Name:     fmt.Sprintf("a%d", a.Index),
+		Ellipsis: a.Ellipsis,
+		Type:     typ,
 	})
 	return nil
 }

@@ -161,6 +161,108 @@ func TestParse(t *testing.T) {
 				Results: []string{"int"},
 			},
 		},
+		"valid go package with valid function definition with ellipsis param should produce expected command": {
+			ctx: context.TODO(),
+			dir: fstest.MapFS{
+				"file.go": {
+					Data: escapeGO(`
+						package foo
+
+						import "context"
+
+						// bar function doc.
+						func bar(ctx context.Context, a int8, _ uint, b *string, c *float32, d *float64, f ...int) int {
+							return 0
+						}
+					`),
+				},
+			},
+			pckg:     "foo",
+			function: "bar",
+			cmd: &Command{
+				Package:  "foo",
+				Function: "bar",
+				Doc:      "bar function doc.",
+				Context:  true,
+				Parameters: []Parameter{
+					Argument{Index: 0, Type: TPrimitive{TKind: Int8}},
+					Placeholder{Type: TPrimitive{TKind: Uint}},
+					Flag{Full: "b", Default: "", Type: TPtr{ETyp: TPrimitive{TKind: String}}},
+					Flag{Full: "c", Default: "0.0", Type: TPtr{ETyp: TPrimitive{TKind: Float32}}},
+					Flag{Full: "d", Default: "0.0", Type: TPtr{ETyp: TPrimitive{TKind: Float64}}},
+					Argument{Index: 1, Ellipsis: true, Type: TPrimitive{TKind: Int}},
+				},
+				Results: []string{"int"},
+			},
+		},
+		"valid go package with valid function definition with placeholder ellipsis param should produce expected command": {
+			ctx: context.TODO(),
+			dir: fstest.MapFS{
+				"file.go": {
+					Data: escapeGO(`
+						package foo
+
+						import "context"
+
+						// bar function doc.
+						func bar(ctx context.Context, a int8, _ uint, b *string, c *float32, d *float64, _ ...int) int {
+							return 0
+						}
+					`),
+				},
+			},
+			pckg:     "foo",
+			function: "bar",
+			cmd: &Command{
+				Package:  "foo",
+				Function: "bar",
+				Doc:      "bar function doc.",
+				Context:  true,
+				Parameters: []Parameter{
+					Argument{Index: 0, Type: TPrimitive{TKind: Int8}},
+					Placeholder{Type: TPrimitive{TKind: Uint}},
+					Flag{Full: "b", Default: "", Type: TPtr{ETyp: TPrimitive{TKind: String}}},
+					Flag{Full: "c", Default: "0.0", Type: TPtr{ETyp: TPrimitive{TKind: Float32}}},
+					Flag{Full: "d", Default: "0.0", Type: TPtr{ETyp: TPrimitive{TKind: Float64}}},
+					Placeholder{Type: TPrimitive{TKind: Int}},
+				},
+				Results: []string{"int"},
+			},
+		},
+		"valid go package with valid function definition with flag ellipsis param should produce expected command": {
+			ctx: context.TODO(),
+			dir: fstest.MapFS{
+				"file.go": {
+					Data: escapeGO(`
+						package foo
+
+						import "context"
+
+						// bar function doc.
+						func bar(ctx context.Context, a int8, _ uint, b *string, c *float32, d *float64, f ...*int) int {
+							return 0
+						}
+					`),
+				},
+			},
+			pckg:     "foo",
+			function: "bar",
+			cmd: &Command{
+				Package:  "foo",
+				Function: "bar",
+				Doc:      "bar function doc.",
+				Context:  true,
+				Parameters: []Parameter{
+					Argument{Index: 0, Type: TPrimitive{TKind: Int8}},
+					Placeholder{Type: TPrimitive{TKind: Uint}},
+					Flag{Full: "b", Default: "", Type: TPtr{ETyp: TPrimitive{TKind: String}}},
+					Flag{Full: "c", Default: "0.0", Type: TPtr{ETyp: TPrimitive{TKind: Float32}}},
+					Flag{Full: "d", Default: "0.0", Type: TPtr{ETyp: TPrimitive{TKind: Float64}}},
+					Flag{Full: "f", Default: "0", Type: TPtr{ETyp: TPrimitive{TKind: Int}}},
+				},
+				Results: []string{"int"},
+			},
+		},
 		"valid go package with empty valid function definition should produce expected command": {
 			ctx: context.TODO(),
 			dir: fstest.MapFS{
@@ -210,7 +312,7 @@ func TestParse(t *testing.T) {
 					Data: escapeGO(`
 						package foo
 
-						func bar(int, int32, int64, z) {
+						func bar(int, int32, int64, z, ...int32) {
 						}
 					`),
 				},
@@ -237,6 +339,7 @@ func TestParse(t *testing.T) {
 					Placeholder{Type: TPrimitive{TKind: Int32}},
 					Placeholder{Type: TPrimitive{TKind: Int64}},
 					Placeholder{Type: TStruct{Typ: "z"}},
+					Placeholder{Type: TPrimitive{TKind: Int32}},
 				},
 			},
 		},

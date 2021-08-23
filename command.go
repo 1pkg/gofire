@@ -19,8 +19,9 @@ func (p Placeholder) Accept(v Visitor) error {
 }
 
 type Argument struct {
-	Index uint64
-	Type  Typ
+	Index    uint64
+	Ellipsis bool
+	Type     Typ
 }
 
 func (a Argument) Accept(v Visitor) error {

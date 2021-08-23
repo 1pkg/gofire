@@ -63,7 +63,11 @@ func (g generator) Return() string {
 func (g generator) Parameters() string {
 	parameters := make([]string, 0, len(g.driver.Parameters()))
 	for _, p := range g.driver.Parameters() {
-		parameters = append(parameters, p.Name)
+		name := p.Name
+		if p.Ellipsis {
+			name = fmt.Sprintf("%s...", name)
+		}
+		parameters = append(parameters, name)
 	}
 	return strings.Join(parameters, ", ")
 }

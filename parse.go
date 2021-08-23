@@ -134,6 +134,7 @@ func (p *parser) parameters(f file, fdecl *ast.FuncDecl) (parameters []Parameter
 	if fdecl.Type.Params != nil {
 		list = fdecl.Type.Params.List
 	}
+	ll := len(list)
 	for i, param := range list {
 		if i == 0 && p.context(param.Type) {
 			context = true
@@ -161,8 +162,18 @@ func (p *parser) parameters(f file, fdecl *ast.FuncDecl) (parameters []Parameter
 			}
 			continue
 		}
-		// If parameter is not a group parse its type.
-		typ, terr := p.typ(param.Type)
+		// If parameter is not a group parse its type and respect ellipsis.
+		// Note that ellipsis naturally has no affect on placeholders and not supported by flags.
+		ptyp := param.Type
+		var ellipsis bool
+		// Only apply ellipsis modifier to the last positional argument.
+		if i == ll-1 && n <= 1 {
+			if p, ok := ptyp.(*ast.Ellipsis); ok {
+				ptyp = p.Elt
+				ellipsis = true
+			}
+		}
+		typ, terr := p.typ(ptyp)
 		if terr != nil {
 			err = fmt.Errorf(
 				"parameter %s type can't be parsed, %w",
@@ -194,8 +205,9 @@ func (p *parser) parameters(f file, fdecl *ast.FuncDecl) (parameters []Parameter
 			}
 			// Otherwise parameter is positional argument.
 			parameters = append(parameters, Argument{
-				Index: uint64(arg),
-				Type:  typ,
+				Index:    uint64(arg),
+				Ellipsis: ellipsis,
+				Type:     typ,
 			})
 			arg++
 		}

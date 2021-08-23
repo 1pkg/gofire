@@ -37,11 +37,12 @@ func (g *Reference) Field() string {
 }
 
 type Parameter struct {
-	Name string
-	Alt  string
-	Type gofire.Typ
-	Doc  string
-	Ref  *Reference
+	Name     string
+	Alt      string
+	Type     gofire.Typ
+	Ellipsis bool
+	Doc      string
+	Ref      *Reference
 }
 
 type Producer interface {
