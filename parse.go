@@ -186,10 +186,9 @@ func (p *parser) parameters(f file, fdecl *ast.FuncDecl) (parameters []Parameter
 			// In case type of parameter is pointer we define it as autoflag.
 			if ptr, ok := typ.(TPtr); ok {
 				parameters = append(parameters, Flag{
-					Full:     name,
-					Optional: true,
-					Default:  ptr.ETyp.Kind().Default(),
-					Type:     typ,
+					Full:    name,
+					Default: ptr.ETyp.Kind().Default(),
+					Type:    typ,
 				})
 				continue
 			}
@@ -260,7 +259,6 @@ func (p *parser) register(f file, gendecl *ast.GenDecl, tspec *ast.TypeSpec) err
 			flag.Full = name.Name
 			// Fix broken default in case the flag wasn't set.
 			if !set {
-				flag.Optional = true
 				flag.Default = flag.Type.Kind().Default()
 			}
 			g.Flags = append(g.Flags, *flag)
@@ -405,7 +403,7 @@ func (p parser) tagflag(rawTag string) (*Flag, bool, error) {
 
 				}
 				val = tv[1]
-			case "optional", "deprecated", "hidden":
+			case "deprecated", "hidden":
 				if ltv == 1 {
 					val = true
 				} else {
@@ -435,8 +433,6 @@ func (p parser) tagflag(rawTag string) (*Flag, bool, error) {
 				f.Short = val.(string)
 			case "default":
 				f.Default = val.(string)
-			case "optional":
-				f.Optional = val.(bool)
 			case "deprecated":
 				f.Deprecated = val.(bool)
 			case "hidden":

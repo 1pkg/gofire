@@ -31,7 +31,6 @@ type Flag struct {
 	Full       string
 	Short      string
 	Doc        string
-	Optional   bool
 	Deprecated bool
 	Hidden     bool
 	Default    string

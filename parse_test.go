@@ -154,9 +154,9 @@ func TestParse(t *testing.T) {
 				Parameters: []Parameter{
 					Argument{Index: 0, Type: TPrimitive{TKind: Int8}},
 					Placeholder{Type: TPrimitive{TKind: Uint}},
-					Flag{Full: "b", Optional: true, Default: "", Type: TPtr{ETyp: TPrimitive{TKind: String}}},
-					Flag{Full: "c", Optional: true, Default: "0.0", Type: TPtr{ETyp: TPrimitive{TKind: Float32}}},
-					Flag{Full: "d", Optional: true, Default: "0.0", Type: TPtr{ETyp: TPrimitive{TKind: Float64}}},
+					Flag{Full: "b", Default: "", Type: TPtr{ETyp: TPrimitive{TKind: String}}},
+					Flag{Full: "c", Default: "0.0", Type: TPtr{ETyp: TPrimitive{TKind: Float32}}},
+					Flag{Full: "d", Default: "0.0", Type: TPtr{ETyp: TPrimitive{TKind: Float64}}},
 				},
 				Results: []string{"int"},
 			},
@@ -287,9 +287,9 @@ func TestParse(t *testing.T) {
 						Name: "cz",
 						Doc:  "z a flag group",
 						Flags: []Flag{
-							{Full: "a", Optional: true, Default: "nil", Type: TPtr{ETyp: TPrimitive{TKind: String}}},
-							{Full: "b", Doc: "b flag boolean", Optional: true, Default: "false", Type: TPrimitive{TKind: Bool}},
-							{Full: "complex", Optional: true, Default: "{}", Type: TMap{KTyp: TPrimitive{TKind: String}, VTyp: TPrimitive{TKind: Int}}},
+							{Full: "a", Default: "nil", Type: TPtr{ETyp: TPrimitive{TKind: String}}},
+							{Full: "b", Doc: "b flag boolean", Default: "false", Type: TPrimitive{TKind: Bool}},
+							{Full: "complex", Default: "{}", Type: TMap{KTyp: TPrimitive{TKind: String}, VTyp: TPrimitive{TKind: Int}}},
 						},
 						Type: TStruct{Typ: "z"},
 					},
@@ -348,7 +348,7 @@ func TestParse(t *testing.T) {
 						package foo
 
 						type z struct {
-							a, b string #gofire:"deprecated,optional,default=str"#
+							a, b string #gofire:"deprecated,default=str"#
 							long complex128 #json:"long" gofire:"hidden=true,short=l"#
 							c complex64 #gofire:"-"#
 							d *uint8 #json:"d"#
@@ -367,11 +367,11 @@ func TestParse(t *testing.T) {
 					Group{
 						Name: "cz",
 						Flags: []Flag{
-							{Full: "a", Optional: true, Deprecated: true, Default: "str", Type: TPrimitive{TKind: String}},
-							{Full: "b", Optional: true, Deprecated: true, Default: "str", Type: TPrimitive{TKind: String}},
+							{Full: "a", Deprecated: true, Default: "str", Type: TPrimitive{TKind: String}},
+							{Full: "b", Deprecated: true, Default: "str", Type: TPrimitive{TKind: String}},
 							{Full: "long", Short: "l", Hidden: true, Type: TPrimitive{TKind: Complex128}},
-							{Full: "c", Optional: true, Default: "0", Type: TPrimitive{TKind: Complex64}},
-							{Full: "d", Optional: true, Default: "nil", Type: TPtr{ETyp: TPrimitive{TKind: Uint8}}},
+							{Full: "c", Default: "0", Type: TPrimitive{TKind: Complex64}},
+							{Full: "d", Default: "nil", Type: TPtr{ETyp: TPrimitive{TKind: Uint8}}},
 						},
 						Type: TStruct{Typ: "z"},
 					},

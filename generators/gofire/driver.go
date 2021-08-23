@@ -93,15 +93,11 @@ func (d *driver) VisitArgument(a gofire.Argument) error {
 
 func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 	_ = d.Driver.VisitFlag(f, g)
-	var defValue *string
-	if f.Optional {
-		value := fmt.Sprintf("%q", f.Default)
-		defValue = &value
-	}
-	return d.visit(*d.Last(), defValue)
+	v := fmt.Sprintf("%q", f.Default)
+	return d.visit(*d.Last(), &v)
 }
 
-func (d *driver) visit(p generators.Parameter, defValue *string) (err error) {
+func (d *driver) visit(p generators.Parameter, val *string) (err error) {
 	defer func() {
 		if v := recover(); v != nil {
 			if verr, ok := v.(error); ok {
@@ -116,11 +112,11 @@ func (d *driver) visit(p generators.Parameter, defValue *string) (err error) {
 		d.alternatives[key] = altKey
 	}
 	d.appendf(";") // help go parser to tokenize new lines mess.
-	d.typ(p.Name, key, p.Type, defValue)
+	d.typ(p.Name, key, p.Type, val)
 	return
 }
 
-func (d *driver) typ(name, key string, t gofire.Typ, defValue *string) *driver {
+func (d *driver) typ(name, key string, t gofire.Typ, val *string) *driver {
 	k := t.Kind()
 	switch k {
 	case gofire.Bool:
@@ -134,22 +130,22 @@ func (d *driver) typ(name, key string, t gofire.Typ, defValue *string) *driver {
 	case gofire.Complex64, gofire.Complex128:
 		fallthrough
 	case gofire.String:
-		return d.tprimitive(name, key, t.(gofire.TPrimitive), defValue)
+		return d.tprimitive(name, key, t.(gofire.TPrimitive), val)
 	case gofire.Array:
-		return d.tarray(name, key, t.(gofire.TArray), defValue)
+		return d.tarray(name, key, t.(gofire.TArray), val)
 	case gofire.Slice:
-		return d.tslice(name, key, t.(gofire.TSlice), defValue)
+		return d.tslice(name, key, t.(gofire.TSlice), val)
 	case gofire.Map:
-		return d.tmap(name, key, t.(gofire.TMap), defValue)
+		return d.tmap(name, key, t.(gofire.TMap), val)
 	default:
 		panic(fmt.Errorf("unknown or ambiguous type %q can't be parsed %s", t.Type(), name))
 	}
 }
 
-func (d *driver) tarray(name, key string, t gofire.TArray, defValue *string) *driver {
+func (d *driver) tarray(name, key string, t gofire.TArray, val *string) *driver {
 	return d.tdefinition(name, t).appendf("{").tdefinition("t", gofire.TPrimitive{TKind: gofire.String}).tassignment(
 		key,
-		defValue,
+		val,
 		"t = %s",
 	).appendf(
 		`
@@ -183,10 +179,10 @@ func (d *driver) tarray(name, key string, t gofire.TArray, defValue *string) *dr
 	).appendf("}")
 }
 
-func (d *driver) tslice(name, key string, t gofire.TSlice, defValue *string) *driver {
+func (d *driver) tslice(name, key string, t gofire.TSlice, val *string) *driver {
 	return d.tdefinition(name, t).appendf("{").tdefinition("t", gofire.TPrimitive{TKind: gofire.String}).tassignment(
 		key,
-		defValue,
+		val,
 		"t = %s",
 	).appendf(
 		`
@@ -217,10 +213,10 @@ func (d *driver) tslice(name, key string, t gofire.TSlice, defValue *string) *dr
 	).appendf("}")
 }
 
-func (d *driver) tmap(name, key string, t gofire.TMap, defValue *string) *driver {
+func (d *driver) tmap(name, key string, t gofire.TMap, val *string) *driver {
 	return d.tdefinition(name, t).appendf("{").tdefinition("t", gofire.TPrimitive{TKind: gofire.String}).tassignment(
 		key,
-		defValue,
+		val,
 		"t = %s",
 	).appendf(
 		`
@@ -261,13 +257,13 @@ func (d *driver) tmap(name, key string, t gofire.TMap, defValue *string) *driver
 	).appendf("}")
 }
 
-func (d *driver) tprimitive(name, key string, t gofire.TPrimitive, defValue *string) *driver {
+func (d *driver) tprimitive(name, key string, t gofire.TPrimitive, val *string) *driver {
 	k := t.Kind()
 	switch k {
 	case gofire.Bool:
 		return d.tdefinition(name, t).tassignment(
 			key,
-			defValue,
+			val,
 			fmt.Sprintf(
 				`
 					t, err := strconv.ParseBool(%%s)
@@ -282,7 +278,7 @@ func (d *driver) tprimitive(name, key string, t gofire.TPrimitive, defValue *str
 	case gofire.Int, gofire.Int8, gofire.Int16, gofire.Int32, gofire.Int64:
 		return d.tdefinition(name, t).tassignment(
 			key,
-			defValue,
+			val,
 			fmt.Sprintf(
 				`
 					t, err := strconv.ParseInt(%%s, 10, %d)
@@ -299,7 +295,7 @@ func (d *driver) tprimitive(name, key string, t gofire.TPrimitive, defValue *str
 	case gofire.Uint, gofire.Uint8, gofire.Uint16, gofire.Uint32, gofire.Uint64:
 		return d.tdefinition(name, t).tassignment(
 			key,
-			defValue,
+			val,
 			fmt.Sprintf(
 				`
 					t, err := strconv.ParseUint(%%s, 10, %d)
@@ -316,7 +312,7 @@ func (d *driver) tprimitive(name, key string, t gofire.TPrimitive, defValue *str
 	case gofire.Float32, gofire.Float64:
 		return d.tdefinition(name, t).tassignment(
 			key,
-			defValue,
+			val,
 			fmt.Sprintf(
 				`
 					t, err := strconv.ParseFloat(%%s, %d)
@@ -333,7 +329,7 @@ func (d *driver) tprimitive(name, key string, t gofire.TPrimitive, defValue *str
 	case gofire.Complex64, gofire.Complex128:
 		return d.tdefinition(name, t).tassignment(
 			key,
-			defValue,
+			val,
 			fmt.Sprintf(
 				`
 					t, err := strconv.ParseComplex(%%s, %d)
@@ -350,7 +346,7 @@ func (d *driver) tprimitive(name, key string, t gofire.TPrimitive, defValue *str
 	case gofire.String:
 		return d.tdefinition(name, t).tassignment(
 			key,
-			defValue,
+			val,
 			fmt.Sprintf("%s = %%s", name),
 		)
 	default:
@@ -374,7 +370,7 @@ func (d *driver) tdefinition(name string, typ gofire.Typ) *driver {
 	)
 }
 
-func (d *driver) tassignment(key string, defValue *string, assignmentStmt string) *driver {
+func (d *driver) tassignment(key string, val *string, assignmentStmt string) *driver {
 	return d.appendf(
 		`
 			if p, ok := _x0tokens[%s]; ok {
@@ -398,7 +394,7 @@ func (d *driver) tassignment(key string, defValue *string, assignmentStmt string
 		},
 		func(f fprintf) {},
 	).ifElseAppendf(
-		defValue != nil,
+		val != nil,
 		func(f fprintf) {
 			f(
 				`
@@ -406,7 +402,7 @@ func (d *driver) tassignment(key string, defValue *string, assignmentStmt string
 						%s
 					}
 				`,
-				fmt.Sprintf(assignmentStmt, *defValue),
+				fmt.Sprintf(assignmentStmt, *val),
 			)
 		},
 		func(f fprintf) {
