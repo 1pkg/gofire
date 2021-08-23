@@ -29,7 +29,7 @@ func (d driver) Imports() []string {
 	}
 }
 
-func (d driver) Output() (string, error) {
+func (d driver) Output(gofire.Command) (string, error) {
 	return d.String(), nil
 }
 

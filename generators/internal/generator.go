@@ -12,7 +12,7 @@ import (
 func init() {
 	generators.Bind = func(driver generators.Driver, cmd gofire.Command) (interface{}, error) {
 		driver = cached(driver)
-		_, err := driver.Output()
+		_, err := driver.Output(cmd)
 		if err != nil {
 			return nil, err
 		}
@@ -76,7 +76,7 @@ func (g generator) Vars() string {
 }
 
 func (g generator) Body() string {
-	out, _ := g.driver.Output()
+	out, _ := g.driver.Output(g.command)
 	return out
 }
 

@@ -3,14 +3,14 @@ package flag
 import (
 	"bytes"
 	"fmt"
+	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/1pkg/gofire"
 	"github.com/1pkg/gofire/generators"
 	"github.com/1pkg/gofire/generators/internal"
 )
-
-// TODO override flag.Usage function with command documentation.
 
 func init() {
 	generators.Register(generators.DriverNameFlag, new(driver))
@@ -20,6 +20,8 @@ type driver struct {
 	internal.Driver
 	preParse  bytes.Buffer
 	postParse bytes.Buffer
+	usageList []string
+	printList []string
 }
 
 func (d driver) Imports() []string {
@@ -30,9 +32,31 @@ func (d driver) Imports() []string {
 	}
 }
 
-func (d driver) Output() (string, error) {
+func (d driver) Output(cmd gofire.Command) (string, error) {
 	var buf bytes.Buffer
+	if _, err := buf.WriteString(`
+		defer func() {
+			if err != nil {
+				flag.PrintDefaults()
+			}
+		}()
+	`); err != nil {
+		return "", err
+	}
 	if _, err := buf.Write(d.preParse.Bytes()); err != nil {
+		return "", err
+	}
+	sort.Strings(d.usageList)
+	sort.Strings(d.printList)
+	u := strings.Join(d.usageList, "\n")
+	p := strings.Join(d.printList, "\n")
+	if _, err := fmt.Fprintf(&buf, `
+		flag.Usage = func() {
+			_, _ = fmt.Fprintln(flag.CommandLine.Output(), %q)
+			_, _ = fmt.Fprintln(flag.CommandLine.Output(), %q)
+			_, _ = fmt.Fprintln(flag.CommandLine.Output(), %q)
+		}
+	`, cmd.Doc, cmd.Function+" "+u, p); err != nil {
 		return "", err
 	}
 	if _, err := buf.WriteString("flag.Parse()"); err != nil {
@@ -48,6 +72,8 @@ func (d *driver) Reset() error {
 	_ = d.Driver.Reset()
 	d.preParse.Reset()
 	d.postParse.Reset()
+	d.usageList = nil
+	d.printList = nil
 	return nil
 }
 
@@ -83,7 +109,7 @@ func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 			f.Type.Type(),
 		)
 	}
-	return d.flag(p.Name, tprim, ptr, f.Default, f.Doc)
+	return d.flag(p.Name, tprim, ptr, p.Default, p.Doc)
 }
 
 func (d *driver) argument(name string, index uint64, t gofire.TPrimitive) error {
@@ -109,7 +135,6 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive) error 
 		); err != nil {
 			return err
 		}
-		return nil
 	case gofire.Int, gofire.Int8, gofire.Int16, gofire.Int32, gofire.Int64:
 		if _, err := fmt.Fprintf(&d.postParse,
 			`
@@ -132,7 +157,6 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive) error 
 		); err != nil {
 			return err
 		}
-		return nil
 	case gofire.Uint, gofire.Uint8, gofire.Uint16, gofire.Uint32, gofire.Uint64:
 		if _, err := fmt.Fprintf(&d.postParse,
 			`
@@ -155,7 +179,6 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive) error 
 		); err != nil {
 			return err
 		}
-		return nil
 	case gofire.Float32, gofire.Float64:
 		if _, err := fmt.Fprintf(&d.postParse,
 			`
@@ -178,7 +201,6 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive) error 
 		); err != nil {
 			return err
 		}
-		return nil
 	case gofire.String:
 		if _, err := fmt.Fprintf(&d.postParse,
 			`
@@ -195,7 +217,6 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive) error 
 		); err != nil {
 			return err
 		}
-		return nil
 	default:
 		return fmt.Errorf(
 			"driver %s does not support such type for an argument %s %s",
@@ -204,6 +225,9 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive) error 
 			t.Type(),
 		)
 	}
+	d.usageList = append(d.usageList, fmt.Sprintf("arg%d", index))
+	d.printList = append(d.printList, fmt.Sprintf("arg %d %s", index, t.Type()))
+	return nil
 }
 
 func (d *driver) flag(name string, t gofire.TPrimitive, ptr bool, val string, doc string) error {
@@ -248,7 +272,6 @@ func (d *driver) flag(name string, t gofire.TPrimitive, ptr bool, val string, do
 		); err != nil {
 			return err
 		}
-		return nil
 	case gofire.Int, gofire.Int8, gofire.Int16, gofire.Int32, gofire.Int64:
 		v, err := d.parsev(name, t, val)
 		if err != nil {
@@ -299,7 +322,6 @@ func (d *driver) flag(name string, t gofire.TPrimitive, ptr bool, val string, do
 		); err != nil {
 			return err
 		}
-		return nil
 	case gofire.Uint, gofire.Uint8, gofire.Uint16, gofire.Uint32, gofire.Uint64:
 		v, err := d.parsev(name, t, val)
 		if err != nil {
@@ -350,7 +372,6 @@ func (d *driver) flag(name string, t gofire.TPrimitive, ptr bool, val string, do
 		); err != nil {
 			return err
 		}
-		return nil
 	case gofire.Float32, gofire.Float64:
 		v, err := d.parsev(name, t, val)
 		if err != nil {
@@ -392,7 +413,6 @@ func (d *driver) flag(name string, t gofire.TPrimitive, ptr bool, val string, do
 		); err != nil {
 			return err
 		}
-		return nil
 	case gofire.String:
 		v, err := d.parsev(name, t, val)
 		if err != nil {
@@ -428,7 +448,6 @@ func (d *driver) flag(name string, t gofire.TPrimitive, ptr bool, val string, do
 		); err != nil {
 			return err
 		}
-		return nil
 	default:
 		return fmt.Errorf(
 			"driver %s does not support such type for a flag %s %s",
@@ -437,6 +456,9 @@ func (d *driver) flag(name string, t gofire.TPrimitive, ptr bool, val string, do
 			t.Type(),
 		)
 	}
+	d.usageList = append(d.usageList, fmt.Sprintf("-%s", name))
+	d.printList = append(d.printList, fmt.Sprintf("-%s %s %s (default %q)", name, t.Type(), doc, val))
+	return nil
 }
 
 func (d *driver) parsev(name string, t gofire.TPrimitive, val string) (interface{}, error) {

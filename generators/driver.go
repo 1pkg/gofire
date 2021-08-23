@@ -13,9 +13,11 @@ const (
 )
 
 type Parameter struct {
-	Name string
-	Alt  string
-	Type gofire.Typ
+	Name    string
+	Alt     string
+	Type    gofire.Typ
+	Default string
+	Doc     string
 }
 
 type Driver interface {
@@ -24,5 +26,5 @@ type Driver interface {
 	Imports() []string
 	Parameters() []Parameter
 	Template() string
-	Output() (string, error)
+	Output(gofire.Command) (string, error)
 }

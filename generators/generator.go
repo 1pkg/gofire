@@ -17,7 +17,8 @@ import (
 var (
 	driverMu sync.Mutex
 	drivers  = make(map[DriverName]Driver)
-	strip    = regexp.MustCompile(`\n(\s)+\n`)
+	stripnl  = regexp.MustCompile(`\n(\s)+\n`)
+	strips   = regexp.MustCompile(`[ \t]+`)
 )
 
 // Register makes a generator driver available by the provided name.
@@ -65,7 +66,15 @@ func Generate(ctx context.Context, name DriverName, cmd gofire.Command, w io.Wri
 	if err := tmpl.Execute(&buf, g); err != nil {
 		return err
 	}
-	src := []byte(strings.Trim(strip.ReplaceAllString(buf.String(), "\n"), "\n\t "))
+	src := []byte(
+		strings.Trim(
+			stripnl.ReplaceAllString(
+				strips.ReplaceAllString(buf.String(), " "),
+				"\n",
+			),
+			"\n\t ",
+		),
+	)
 	if src, err = format.Source(src); err != nil {
 		return err
 	}

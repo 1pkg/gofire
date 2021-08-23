@@ -30,22 +30,27 @@ func (d *Driver) VisitArgument(a gofire.Argument) error {
 
 func (d *Driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 	var gname string
+	var gdoc string
 	if g != nil {
 		gname = g.Name
+		gdoc = g.Doc
 		d.groups[gname] = generators.Parameter{
 			Name: fmt.Sprintf("g%s", gname),
 			Type: g.Type,
 		}
 	}
-	name := fmt.Sprintf("f%s%s", gname, f.Full)
+	name := fmt.Sprintf("%s%s", gname, f.Full)
+	doc := fmt.Sprintf("%s %s", gdoc, f.Doc)
 	var alt string
 	if f.Short != "" {
-		alt = fmt.Sprintf("f%s%s", gname, f.Short)
+		alt = fmt.Sprintf("%s%s", gname, f.Short)
 	}
 	d.params = append(d.params, generators.Parameter{
-		Name: name,
-		Alt:  alt,
-		Type: f.Type,
+		Name:    name,
+		Alt:     alt,
+		Type:    f.Type,
+		Default: f.Default,
+		Doc:     doc,
 	})
 	return nil
 }
@@ -101,9 +106,9 @@ func cached(driver generators.Driver) generators.Driver {
 		d    cd
 	)
 	d.Driver = driver
-	d.f = func() (string, error) {
+	d.f = func(cmd gofire.Command) (string, error) {
 		if !done {
-			out, err = driver.Output()
+			out, err = driver.Output(cmd)
 			done = true
 		}
 		return out, err
@@ -113,9 +118,9 @@ func cached(driver generators.Driver) generators.Driver {
 
 type cd struct {
 	generators.Driver
-	f func() (string, error)
+	f func(gofire.Command) (string, error)
 }
 
-func (d cd) Output() (string, error) {
-	return d.f()
+func (d cd) Output(cmd gofire.Command) (string, error) {
+	return d.f(cmd)
 }
