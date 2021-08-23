@@ -78,20 +78,21 @@ func (d *driver) Reset() error {
 }
 
 func (d *driver) VisitArgument(a gofire.Argument) error {
-	if err := d.Driver.VisitArgument(a); err != nil {
-		return err
-	}
+	_ = d.Driver.VisitArgument(a)
 	p := d.Last()
 	tp, ok := a.Type.(gofire.TPrimitive)
 	if !ok {
 		return fmt.Errorf(
-			"driver %s does not support non primitive argument types but got an argument %s %s",
+			"driver %s: non primitive argument types are not supported, got an argument %s %s",
 			generators.DriverNamePFlag,
 			p.Name,
 			a.Type.Type(),
 		)
 	}
-	return d.argument(p.Name, a.Index, tp)
+	if err := d.argument(p.Name, a.Index, tp); err != nil {
+		return fmt.Errorf("driver %s: argument %w", generators.DriverNamePFlag, err)
+	}
+	return nil
 }
 
 func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
@@ -102,7 +103,10 @@ func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 	if ptr {
 		typ = tprt.ETyp
 	}
-	return d.flag(p.Name, p.Alt, typ, ptr, f.Default, f.Doc, f.Deprecated, f.Hidden)
+	if err := d.flag(p.Name, p.Alt, typ, ptr, f.Default, f.Doc, f.Deprecated, f.Hidden); err != nil {
+		return fmt.Errorf("driver %s: flag %w", generators.DriverNamePFlag, err)
+	}
+	return nil
 }
 
 func (d *driver) argument(name string, index uint64, t gofire.TPrimitive) error {
@@ -212,10 +216,9 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive) error 
 		}
 	default:
 		return fmt.Errorf(
-			"driver %s does not support such type for an argument %s %s",
-			generators.DriverNamePFlag,
-			name,
+			"type %s is not supported for an argument %s",
 			t.Type(),
+			name,
 		)
 	}
 	d.usageList = append(d.usageList, fmt.Sprintf("arg%d", index))
@@ -235,11 +238,11 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 		switch etyp.Kind() {
 		case gofire.Bool:
 			v, err := d.parsev(name, t, val)
-			if err != nil {
+			if err != nil || v == nil {
 				return fmt.Errorf(
-					"driver %s error happened during parsing default value for a flag %s: %v",
-					generators.DriverNamePFlag,
+					"can't parse default value for a flag %s type %s: %w",
 					name,
+					t.Type(),
 					err,
 				)
 			}
@@ -271,11 +274,11 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 			}
 		case gofire.Int32, gofire.Int64:
 			v, err := d.parsev(name, t, val)
-			if err != nil {
+			if err != nil || v == nil {
 				return fmt.Errorf(
-					"driver %s error happened during parsing default value for a flag %s: %v",
-					generators.DriverNamePFlag,
+					"can't parse default value for a flag %s type %s: %w",
 					name,
+					t.Type(),
 					err,
 				)
 			}
@@ -309,11 +312,11 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 			}
 		case gofire.Float32, gofire.Float64:
 			v, err := d.parsev(name, t, val)
-			if err != nil {
+			if err != nil || v == nil {
 				return fmt.Errorf(
-					"driver %s error happened during parsing default value for a flag %s: %v",
-					generators.DriverNamePFlag,
+					"can't parse default value for a flag %s type %s: %w",
 					name,
+					t.Type(),
 					err,
 				)
 			}
@@ -347,19 +350,18 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 			}
 		default:
 			return fmt.Errorf(
-				"driver %s does not support such type for a flag %s %s",
-				generators.DriverNamePFlag,
-				name,
+				"type %s is not supported for a flag %s",
 				t.Type(),
+				name,
 			)
 		}
 	case gofire.Bool:
 		v, err := d.parsev(name, t, val)
-		if err != nil {
+		if err != nil || v == nil {
 			return fmt.Errorf(
-				"driver %s error happened during parsing default value for a flag %s: %v",
-				generators.DriverNamePFlag,
+				"can't parse default value for a flag %s type %s: %w",
 				name,
+				t.Type(),
 				err,
 			)
 		}
@@ -391,11 +393,11 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 		}
 	case gofire.Int, gofire.Int8, gofire.Int16, gofire.Int32, gofire.Int64:
 		v, err := d.parsev(name, t, val)
-		if err != nil {
+		if err != nil || v == nil {
 			return fmt.Errorf(
-				"driver %s error happened during parsing default value for a flag %s: %v",
-				generators.DriverNamePFlag,
+				"can't parse default value for a flag %s type %s: %w",
 				name,
+				t.Type(),
 				err,
 			)
 		}
@@ -430,11 +432,11 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 		}
 	case gofire.Uint, gofire.Uint8, gofire.Uint16, gofire.Uint32, gofire.Uint64:
 		v, err := d.parsev(name, t, val)
-		if err != nil {
+		if err != nil || v == nil {
 			return fmt.Errorf(
-				"driver %s error happened during parsing default value for a flag %s: %v",
-				generators.DriverNamePFlag,
+				"can't parse default value for a flag %s type %s: %w",
 				name,
+				t.Type(),
 				err,
 			)
 		}
@@ -469,11 +471,11 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 		}
 	case gofire.Float32, gofire.Float64:
 		v, err := d.parsev(name, t, val)
-		if err != nil {
+		if err != nil || v == nil {
 			return fmt.Errorf(
-				"driver %s error happened during parsing default value for a flag %s: %v",
-				generators.DriverNamePFlag,
+				"can't parse default value for a flag %s type %s: %w",
 				name,
+				t.Type(),
 				err,
 			)
 		}
@@ -508,11 +510,11 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 		}
 	case gofire.String:
 		v, err := d.parsev(name, t, val)
-		if err != nil {
+		if err != nil || v == nil {
 			return fmt.Errorf(
-				"driver %s error happened during parsing default value for a flag %s: %v",
-				generators.DriverNamePFlag,
+				"can't parse default value for a flag %s type %s: %w",
 				name,
+				t.Type(),
 				err,
 			)
 		}
@@ -544,10 +546,9 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 		}
 	default:
 		return fmt.Errorf(
-			"driver %s does not support such type for a flag %s %s",
-			generators.DriverNamePFlag,
-			name,
+			"type %s is not supported for a flag %s",
 			t.Type(),
+			name,
 		)
 	}
 	if deprecated {
@@ -607,7 +608,7 @@ func (d *driver) parsev(name string, t gofire.Typ, val string) (interface{}, err
 		ek := etyp.Kind()
 		switch etyp.Kind() {
 		case gofire.Bool:
-			pvals, err := d.tokenize(val)
+			pvals, err := d.slice(val)
 			if err != nil {
 				return nil, err
 			}
@@ -621,7 +622,7 @@ func (d *driver) parsev(name string, t gofire.Typ, val string) (interface{}, err
 			}
 			return v, nil
 		case gofire.Int, gofire.Int8, gofire.Int16, gofire.Int32, gofire.Int64:
-			pvals, err := d.tokenize(val)
+			pvals, err := d.slice(val)
 			if err != nil {
 				return nil, err
 			}
@@ -635,7 +636,7 @@ func (d *driver) parsev(name string, t gofire.Typ, val string) (interface{}, err
 			}
 			return v, nil
 		case gofire.Uint, gofire.Uint8, gofire.Uint16, gofire.Uint32, gofire.Uint64:
-			pvals, err := d.tokenize(val)
+			pvals, err := d.slice(val)
 			if err != nil {
 				return nil, err
 			}
@@ -649,7 +650,7 @@ func (d *driver) parsev(name string, t gofire.Typ, val string) (interface{}, err
 			}
 			return v, nil
 		case gofire.Float32, gofire.Float64:
-			pvals, err := d.tokenize(val)
+			pvals, err := d.slice(val)
 			if err != nil {
 				return nil, err
 			}
@@ -662,13 +663,6 @@ func (d *driver) parsev(name string, t gofire.Typ, val string) (interface{}, err
 				v = append(v, f)
 			}
 			return v, nil
-		default:
-			return nil, fmt.Errorf(
-				"driver %s does not support such type for a flag %s %s",
-				generators.DriverNamePFlag,
-				name,
-				t.Type(),
-			)
 		}
 	case gofire.Bool:
 		if val == "" {
@@ -692,23 +686,17 @@ func (d *driver) parsev(name string, t gofire.Typ, val string) (interface{}, err
 		return strconv.ParseFloat(val, int(k.Base()))
 	case gofire.String:
 		return val, nil
-	default:
-		return nil, fmt.Errorf(
-			"driver %s does not support such type for a flag %s %s",
-			generators.DriverNamePFlag,
-			name,
-			t.Type(),
-		)
 	}
+	return nil, nil
 }
 
-func (d *driver) tokenize(val string) ([]string, error) {
+func (d *driver) slice(val string) ([]string, error) {
 	pval := strings.ReplaceAll(val, " ", "")
 	if pval == "{}" || pval == "" {
 		return nil, nil
 	}
 	if !strings.HasPrefix(pval, "{") || !strings.HasSuffix(pval, "}") {
-		return nil, fmt.Errorf("invalid value %s can't be parsed", val)
+		return nil, fmt.Errorf("invalid value %s can't be parsed as a slice", val)
 	}
 	return strings.Split(pval, ","), nil
 }

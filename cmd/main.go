@@ -97,7 +97,7 @@ func main() {
 			// },
 		},
 	}
-	if err := generators.Generate(context.TODO(), generators.DriverNameFlag, cmd, os.Stdout); err != nil {
+	if err := generators.Generate(context.TODO(), generators.DriverNamePFlag, cmd, os.Stdout); err != nil {
 		log.Fatal(err)
 	}
 }

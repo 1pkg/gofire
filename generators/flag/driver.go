@@ -83,13 +83,16 @@ func (d *driver) VisitArgument(a gofire.Argument) error {
 	tp, ok := a.Type.(gofire.TPrimitive)
 	if !ok {
 		return fmt.Errorf(
-			"driver %s does not support non primitive argument types but got an argument %s %s",
+			"driver %s: non primitive argument types are not supported, got an argument %s %s",
 			generators.DriverNameFlag,
 			p.Name,
 			a.Type.Type(),
 		)
 	}
-	return d.argument(p.Name, a.Index, tp)
+	if err := d.argument(p.Name, a.Index, tp); err != nil {
+		return fmt.Errorf("driver %s: argument %w", generators.DriverNameFlag, err)
+	}
+	return nil
 }
 
 func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
@@ -103,13 +106,16 @@ func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 	tprim, ok := typ.(gofire.TPrimitive)
 	if !ok {
 		return fmt.Errorf(
-			"driver %s does not support non pointer or non primitive flag types but got a flag %s %s",
+			"driver %s: non pointer and non primitive flag types are not supported, got a flag %s %s",
 			generators.DriverNameFlag,
 			p.Name,
 			f.Type.Type(),
 		)
 	}
-	return d.flag(p.Name, tprim, ptr, p.Default, p.Doc)
+	if err := d.flag(p.Name, tprim, ptr, p.Default, p.Doc); err != nil {
+		return fmt.Errorf("driver %s: flag %w", generators.DriverNameFlag, err)
+	}
+	return nil
 }
 
 func (d *driver) argument(name string, index uint64, t gofire.TPrimitive) error {
@@ -219,10 +225,9 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive) error 
 		}
 	default:
 		return fmt.Errorf(
-			"driver %s does not support such type for an argument %s %s",
-			generators.DriverNameFlag,
-			name,
+			"type %s is not supported for an argument %s",
 			t.Type(),
+			name,
 		)
 	}
 	d.usageList = append(d.usageList, fmt.Sprintf("arg%d", index))
@@ -239,11 +244,11 @@ func (d *driver) flag(name string, t gofire.TPrimitive, ptr bool, val string, do
 	switch k {
 	case gofire.Bool:
 		v, err := d.parsev(name, t, val)
-		if err != nil {
+		if err != nil || v == nil {
 			return fmt.Errorf(
-				"driver %s error happened during parsing default value for a flag %s: %v",
-				generators.DriverNameFlag,
+				"can't parse default value for a flag %s type %s: %w",
 				name,
+				t.Type(),
 				err,
 			)
 		}
@@ -274,11 +279,11 @@ func (d *driver) flag(name string, t gofire.TPrimitive, ptr bool, val string, do
 		}
 	case gofire.Int, gofire.Int8, gofire.Int16, gofire.Int32, gofire.Int64:
 		v, err := d.parsev(name, t, val)
-		if err != nil {
+		if err != nil || v == nil {
 			return fmt.Errorf(
-				"driver %s error happened during parsing default value for a flag %s: %v",
-				generators.DriverNameFlag,
+				"can't parse default value for a flag %s type %s: %w",
 				name,
+				t.Type(),
 				err,
 			)
 		}
@@ -324,11 +329,11 @@ func (d *driver) flag(name string, t gofire.TPrimitive, ptr bool, val string, do
 		}
 	case gofire.Uint, gofire.Uint8, gofire.Uint16, gofire.Uint32, gofire.Uint64:
 		v, err := d.parsev(name, t, val)
-		if err != nil {
+		if err != nil || v == nil {
 			return fmt.Errorf(
-				"driver %s error happened during parsing default value for a flag %s: %v",
-				generators.DriverNameFlag,
+				"can't parse default value for a flag %s type %s: %w",
 				name,
+				t.Type(),
 				err,
 			)
 		}
@@ -374,11 +379,11 @@ func (d *driver) flag(name string, t gofire.TPrimitive, ptr bool, val string, do
 		}
 	case gofire.Float32, gofire.Float64:
 		v, err := d.parsev(name, t, val)
-		if err != nil {
+		if err != nil || v == nil {
 			return fmt.Errorf(
-				"driver %s error happened during parsing default value for a flag %s: %v",
-				generators.DriverNameFlag,
+				"can't parse default value for a flag %s type %s: %w",
 				name,
+				t.Type(),
 				err,
 			)
 		}
@@ -415,11 +420,11 @@ func (d *driver) flag(name string, t gofire.TPrimitive, ptr bool, val string, do
 		}
 	case gofire.String:
 		v, err := d.parsev(name, t, val)
-		if err != nil {
+		if err != nil || v == nil {
 			return fmt.Errorf(
-				"driver %s error happened during parsing default value for a flag %s: %v",
-				generators.DriverNameFlag,
+				"can't parse default value for a flag %s type %s: %w",
 				name,
+				t.Type(),
 				err,
 			)
 		}
@@ -450,10 +455,9 @@ func (d *driver) flag(name string, t gofire.TPrimitive, ptr bool, val string, do
 		}
 	default:
 		return fmt.Errorf(
-			"driver %s does not support such type for a flag %s %s",
-			generators.DriverNameFlag,
-			name,
+			"type %s is not supported for a flag %s",
 			t.Type(),
+			name,
 		)
 	}
 	d.usageList = append(d.usageList, fmt.Sprintf("-%s", name))
@@ -487,11 +491,6 @@ func (d *driver) parsev(name string, t gofire.TPrimitive, val string) (interface
 	case gofire.String:
 		return val, nil
 	default:
-		return nil, fmt.Errorf(
-			"driver %s does not support such type for a flag %s %s",
-			generators.DriverNameFlag,
-			name,
-			t.Type(),
-		)
+		return nil, nil
 	}
 }
