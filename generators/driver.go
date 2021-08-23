@@ -20,11 +20,21 @@ type Parameter struct {
 	Doc     string
 }
 
+type Producer interface {
+	Output(gofire.Command) (string, error)
+}
+
+type ProducerFunc func(gofire.Command) (string, error)
+
+func (f ProducerFunc) Output(cmd gofire.Command) (string, error) {
+	return f(cmd)
+}
+
 type Driver interface {
 	gofire.Visitor
 	Reset() error
 	Imports() []string
 	Parameters() []Parameter
 	Template() string
-	Output(gofire.Command) (string, error)
+	Producer
 }

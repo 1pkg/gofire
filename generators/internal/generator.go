@@ -11,18 +11,19 @@ import (
 
 func init() {
 	generators.Bind = func(driver generators.Driver, cmd gofire.Command) (interface{}, error) {
-		driver = cached(driver)
-		_, err := driver.Output(cmd)
+		producer := cached(driver)
+		_, err := producer.Output(cmd)
 		if err != nil {
 			return nil, err
 		}
-		return generator{driver: driver, command: cmd}, nil
+		return generator{driver: driver, producer: producer, command: cmd}, nil
 	}
 }
 
 type generator struct {
-	driver  generators.Driver
-	command gofire.Command
+	driver   generators.Driver
+	producer generators.Producer
+	command  gofire.Command
 }
 
 func (g generator) Package() string {
@@ -76,7 +77,7 @@ func (g generator) Vars() string {
 }
 
 func (g generator) Body() string {
-	out, _ := g.driver.Output(g.command)
+	out, _ := g.producer.Output(g.command)
 	return out
 }
 

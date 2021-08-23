@@ -98,29 +98,17 @@ func (d *Driver) Template() string {
 	`
 }
 
-func cached(driver generators.Driver) generators.Driver {
+func cached(p generators.Producer) generators.Producer {
 	var (
 		out  string
 		err  error
 		done bool
-		d    cd
 	)
-	d.Driver = driver
-	d.f = func(cmd gofire.Command) (string, error) {
+	return generators.ProducerFunc(func(cmd gofire.Command) (string, error) {
 		if !done {
-			out, err = driver.Output(cmd)
+			out, err = p.Output(cmd)
 			done = true
 		}
 		return out, err
-	}
-	return d
-}
-
-type cd struct {
-	generators.Driver
-	f func(gofire.Command) (string, error)
-}
-
-func (d cd) Output(cmd gofire.Command) (string, error) {
-	return d.f(cmd)
+	})
 }
