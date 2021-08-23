@@ -112,7 +112,7 @@ func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 			f.Type.Type(),
 		)
 	}
-	if err := d.flag(p.Name, tprim, ptr, p.Default, p.Doc); err != nil {
+	if err := d.flag(p.Name, tprim, ptr, f.Default, p.Doc); err != nil {
 		return fmt.Errorf("driver %s: flag %w", generators.DriverNameFlag, err)
 	}
 	return nil

@@ -70,15 +70,28 @@ func (g generator) Parameters() string {
 
 func (g generator) Vars() string {
 	vars := make([]string, 0, len(g.driver.Parameters()))
+	groups := make(map[string]bool)
 	for _, p := range g.driver.Parameters() {
 		vars = append(vars, fmt.Sprintf("var %s %s", p.Name, p.Type.Type()))
+		// for each struct group generate separate var too.
+		if g := p.Ref.Group(); g != "" && !groups[g] {
+			vars = append(vars, fmt.Sprintf("var g%s %s", g, g))
+			groups[g] = true
+		}
 	}
 	return strings.Join(vars, "\n")
 }
 
 func (g generator) Body() string {
 	out, _ := g.producer.Output(g.command)
-	return out
+	// collect all group assigns and append them to generated body.
+	var gassigns []string
+	for _, p := range g.driver.Parameters() {
+		if p.Ref != nil {
+			gassigns = append(gassigns, fmt.Sprintf("g%s=%s", *p.Ref, p.Name))
+		}
+	}
+	return out + strings.Join(gassigns, "\n")
 }
 
 func (g generator) Call() string {

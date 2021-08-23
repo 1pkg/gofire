@@ -57,6 +57,22 @@ func main() {
 					TKind: gofire.Bool,
 				},
 			},
+			gofire.Group{
+				Name: "group",
+				Doc:  "some",
+				Type: gofire.TStruct{Typ: "group"},
+				Flags: []gofire.Flag{
+					{
+						Full:  "aiiii",
+						Short: "z",
+						Type: gofire.TPtr{
+							ETyp: gofire.TPrimitive{
+								TKind: gofire.String,
+							},
+						},
+					},
+				},
+			},
 			// gofire.Flag{
 			// 	Full:     "names",
 			// 	Optional: true,

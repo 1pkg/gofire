@@ -1,6 +1,9 @@
 package generators
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/1pkg/gofire"
 )
 
@@ -12,12 +15,33 @@ const (
 	DriverNamePFlag DriverName = "pflag"
 )
 
+type Reference string
+
+func NewReference(g, f string) *Reference {
+	ref := Reference(fmt.Sprintf("%s.%s", g, f))
+	return &ref
+}
+
+func (g *Reference) Group() string {
+	if g == nil {
+		return ""
+	}
+	return strings.Split(string(*g), ".")[0]
+}
+
+func (g *Reference) Field() string {
+	if g == nil {
+		return ""
+	}
+	return strings.Split(string(*g), ".")[1]
+}
+
 type Parameter struct {
-	Name    string
-	Alt     string
-	Type    gofire.Typ
-	Default string
-	Doc     string
+	Name string
+	Alt  string
+	Type gofire.Typ
+	Doc  string
+	Ref  *Reference
 }
 
 type Producer interface {

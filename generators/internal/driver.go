@@ -9,7 +9,6 @@ import (
 
 type Driver struct {
 	params []generators.Parameter
-	groups map[string]generators.Parameter
 }
 
 func (d *Driver) VisitPlaceholder(p gofire.Placeholder) error {
@@ -34,10 +33,6 @@ func (d *Driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 	if g != nil {
 		gname = g.Name
 		gdoc = g.Doc
-		d.groups[gname] = generators.Parameter{
-			Name: fmt.Sprintf("g%s", gname),
-			Type: g.Type,
-		}
 	}
 	name := fmt.Sprintf("%s%s", gname, f.Full)
 	doc := fmt.Sprintf("%s %s", gdoc, f.Doc)
@@ -45,12 +40,16 @@ func (d *Driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 	if f.Short != "" {
 		alt = fmt.Sprintf("%s%s", gname, f.Short)
 	}
+	var ref *generators.Reference
+	if g != nil {
+		ref = generators.NewReference(gname, f.Full)
+	}
 	d.params = append(d.params, generators.Parameter{
-		Name:    name,
-		Alt:     alt,
-		Type:    f.Type,
-		Default: f.Default,
-		Doc:     doc,
+		Name: name,
+		Alt:  alt,
+		Type: f.Type,
+		Doc:  doc,
+		Ref:  ref,
 	})
 	return nil
 }
@@ -61,11 +60,7 @@ func (d *Driver) Reset() error {
 }
 
 func (d Driver) Parameters() []generators.Parameter {
-	groups := make([]generators.Parameter, 0, len(d.groups))
-	for _, p := range d.groups {
-		groups = append(groups, p)
-	}
-	return append(d.params, groups...)
+	return d.params
 }
 
 func (d Driver) Last() *generators.Parameter {
