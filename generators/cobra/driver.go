@@ -3,6 +3,7 @@ package cobra
 import (
 	"bytes"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -20,6 +21,7 @@ type driver struct {
 	postParse bytes.Buffer
 	usageList []string
 	printList []string
+	nargs     uint
 }
 
 func (d driver) Output(cmd gofire.Command) (string, error) {
@@ -32,36 +34,32 @@ func (d driver) Output(cmd gofire.Command) (string, error) {
 	`, d.postParse.String()); err != nil {
 		return "", err
 	}
+	if _, err := fmt.Fprintf(&buf, "cmd.Args = cobra.MinimumNArgs(%d);", d.nargs); err != nil {
+		return "", err
+	}
+	digest := cmd.Function
+	if len(cmd.Doc) > len(digest) {
+		digest = strings.Split(cmd.Doc, "\n")[0]
+	}
+	sort.Strings(d.usageList)
+	sort.Strings(d.printList)
+	u := strings.Join(d.usageList, "\n")
+	p := strings.Join(d.printList, "\n")
+	if _, err := fmt.Fprintf(&buf, "cmd.Short = %q;", digest); err != nil {
+		return "", err
+	}
+	if _, err := fmt.Fprintf(&buf, "cmd.Long = %q;", fmt.Sprintf("%s\n%s\n%s", cmd.Doc, cmd.Function+" "+u, p)); err != nil {
+		return "", err
+	}
+	if _, err := fmt.Fprintf(&buf, "cmd.Use = %q;", cmd.Function+" "+u); err != nil {
+		return "", err
+	}
 	if _, err := buf.Write(d.preParse.Bytes()); err != nil {
 		return "", err
 	}
 	if _, err := buf.WriteString("err = cli.ExecuteContext(ctx)"); err != nil {
 		return "", err
 	}
-
-	// if _, err := buf.WriteString(`
-	// 	defer func() {
-	// 		if err != nil {
-	// 			pflag.PrintDefaults()
-	// 		}
-	// 	}()
-	// `); err != nil {
-	// 	return "", err
-	// }
-	// sort.Strings(d.usageList)
-	// sort.Strings(d.printList)
-	// u := strings.Join(d.usageList, "\n")
-	// p := strings.Join(d.printList, "\n")
-	// if _, err := fmt.Fprintf(&buf, `
-	// 	pflag.Usage = func() {
-	// 		_, _ = fmt.Fprintln(pflag.CommandLine.Output(), %q)
-	// 		_, _ = fmt.Fprintln(pflag.CommandLine.Output(), %q)
-	// 		_, _ = fmt.Fprintln(pflag.CommandLine.Output(), %q)
-	// 	}
-	// `, cmd.Doc, cmd.Function+" "+u, p); err != nil {
-	// 	return "", err
-	// }
-
 	return buf.String(), nil
 }
 
@@ -256,6 +254,7 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive) error 
 			name,
 		)
 	}
+	d.nargs++
 	d.usageList = append(d.usageList, fmt.Sprintf("arg%d", index))
 	d.printList = append(d.printList, fmt.Sprintf("arg %d %s", index, t.Type()))
 	return nil
@@ -621,11 +620,12 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 		if deprecated {
 			pdeprecated = "(DEPRECATED)"
 		}
+		u := fmt.Sprintf(`--%s=""`, name)
 		var pshort string
 		if short != "" {
-			pshort = fmt.Sprintf("-%s", short)
+			u += " " + fmt.Sprintf(`-%s=""`, short)
 		}
-		d.usageList = append(d.usageList, fmt.Sprintf("--%s %s", name, pshort))
+		d.usageList = append(d.usageList, u)
 		d.printList = append(
 			d.printList,
 			fmt.Sprintf("--%s %s %s %s (default %q) %s", name, pshort, t.Type(), doc, val, pdeprecated),

@@ -586,11 +586,12 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 		if deprecated {
 			pdeprecated = "(DEPRECATED)"
 		}
+		u := fmt.Sprintf(`--%s=""`, name)
 		var pshort string
 		if short != "" {
-			pshort = fmt.Sprintf("-%s", short)
+			u += " " + fmt.Sprintf(`-%s=""`, short)
 		}
-		d.usageList = append(d.usageList, fmt.Sprintf("--%s %s", name, pshort))
+		d.usageList = append(d.usageList, u)
 		d.printList = append(
 			d.printList,
 			fmt.Sprintf("--%s %s %s %s (default %q) %s", name, pshort, t.Type(), doc, val, pdeprecated),

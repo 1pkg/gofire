@@ -459,7 +459,7 @@ func (d *driver) flag(name string, t gofire.TPrimitive, ptr bool, val string, do
 			name,
 		)
 	}
-	d.usageList = append(d.usageList, fmt.Sprintf("-%s", name))
+	d.usageList = append(d.usageList, fmt.Sprintf(`-%s=""`, name))
 	d.printList = append(d.printList, fmt.Sprintf("-%s %s %s (default %q)", name, t.Type(), doc, val))
 	return nil
 }
