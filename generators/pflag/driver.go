@@ -9,7 +9,6 @@ import (
 
 	"github.com/1pkg/gofire"
 	"github.com/1pkg/gofire/generators"
-	"github.com/1pkg/gofire/generators/internal"
 )
 
 func init() {
@@ -17,19 +16,11 @@ func init() {
 }
 
 type driver struct {
-	internal.Driver
+	generators.BaseDriver
 	preParse  bytes.Buffer
 	postParse bytes.Buffer
 	usageList []string
 	printList []string
-}
-
-func (d driver) Imports() []string {
-	return []string{
-		`flag "github.com/spf13/pflag"`,
-		`"fmt"`,
-		`"strconv"`,
-	}
 }
 
 func (d driver) Output(cmd gofire.Command) (string, error) {
@@ -69,7 +60,7 @@ func (d driver) Output(cmd gofire.Command) (string, error) {
 }
 
 func (d *driver) Reset() error {
-	_ = d.Driver.Reset()
+	_ = d.BaseDriver.Reset()
 	d.preParse.Reset()
 	d.postParse.Reset()
 	d.usageList = nil
@@ -77,8 +68,16 @@ func (d *driver) Reset() error {
 	return nil
 }
 
+func (d driver) Imports() []string {
+	return []string{
+		`flag "github.com/spf13/pflag"`,
+		`"fmt"`,
+		`"strconv"`,
+	}
+}
+
 func (d *driver) VisitArgument(a gofire.Argument) error {
-	_ = d.Driver.VisitArgument(a)
+	_ = d.BaseDriver.VisitArgument(a)
 	p := d.Last()
 	tp, ok := a.Type.(gofire.TPrimitive)
 	if !ok {
@@ -96,7 +95,7 @@ func (d *driver) VisitArgument(a gofire.Argument) error {
 }
 
 func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
-	_ = d.Driver.VisitFlag(f, g)
+	_ = d.BaseDriver.VisitFlag(f, g)
 	p := d.Last()
 	typ := f.Type
 	tprt, ptr := f.Type.(gofire.TPtr)

@@ -6,7 +6,6 @@ import (
 
 	"github.com/1pkg/gofire"
 	"github.com/1pkg/gofire/generators"
-	"github.com/1pkg/gofire/generators/internal"
 )
 
 func init() {
@@ -14,19 +13,9 @@ func init() {
 }
 
 type driver struct {
-	internal.Driver
+	generators.BaseDriver
 	bytes.Buffer
 	alternatives map[string]string
-}
-
-func (d driver) Imports() []string {
-	return []string{
-		`"errors"`,
-		`"fmt"`,
-		`"strconv"`,
-		`"strings"`,
-		`"os"`,
-	}
 }
 
 func (d driver) Output(gofire.Command) (string, error) {
@@ -42,7 +31,7 @@ func (d *driver) Reset() (err error) {
 		}
 	}()
 	// reset the buffer and append cli os.Args parse code.
-	_ = d.Driver.Reset()
+	_ = d.BaseDriver.Reset()
 	d.Buffer.Reset()
 	d.alternatives = make(map[string]string)
 	d.appendf(
@@ -86,13 +75,23 @@ func (d *driver) Reset() (err error) {
 	return
 }
 
+func (d driver) Imports() []string {
+	return []string{
+		`"errors"`,
+		`"fmt"`,
+		`"strconv"`,
+		`"strings"`,
+		`"os"`,
+	}
+}
+
 func (d *driver) VisitArgument(a gofire.Argument) error {
-	_ = d.Driver.VisitArgument(a)
+	_ = d.BaseDriver.VisitArgument(a)
 	return d.visit(*d.Last(), nil)
 }
 
 func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
-	_ = d.Driver.VisitFlag(f, g)
+	_ = d.BaseDriver.VisitFlag(f, g)
 	v := fmt.Sprintf("%q", f.Default)
 	return d.visit(*d.Last(), &v)
 }

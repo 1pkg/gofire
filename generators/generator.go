@@ -35,11 +35,6 @@ func Register(name DriverName, driver Driver) {
 	drivers[name] = driver
 }
 
-// Bind binds actual driver to provided cli command and returns template bag for it to execute on.
-var Bind = func(Driver, gofire.Command) (interface{}, error) {
-	return nil, nil
-}
-
 // Generate generates cli command using provided driver to provided writer output.
 func Generate(ctx context.Context, name DriverName, cmd gofire.Command, w io.Writer) error {
 	driverMu.Lock()
@@ -54,7 +49,7 @@ func Generate(ctx context.Context, name DriverName, cmd gofire.Command, w io.Wri
 	if err := cmd.Accept(driver); err != nil {
 		return err
 	}
-	g, err := Bind(driver, cmd)
+	proxy, err := proxify(driver, cmd)
 	if err != nil {
 		return err
 	}
@@ -63,7 +58,7 @@ func Generate(ctx context.Context, name DriverName, cmd gofire.Command, w io.Wri
 		return err
 	}
 	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, g); err != nil {
+	if err := tmpl.Execute(&buf, proxy); err != nil {
 		return err
 	}
 	src := []byte(
