@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"go/format"
 	"io"
 	"regexp"
 	"strings"
@@ -12,6 +11,7 @@ import (
 	"text/template"
 
 	"github.com/1pkg/gofire"
+	"golang.org/x/tools/imports"
 )
 
 var (
@@ -70,7 +70,7 @@ func Generate(ctx context.Context, name DriverName, cmd gofire.Command, w io.Wri
 			"\n\t ",
 		),
 	)
-	if src, err = format.Source(src); err != nil {
+	if src, err = imports.Process("", src, nil); err != nil {
 		return err
 	}
 	if _, err := w.Write(src); err != nil {
