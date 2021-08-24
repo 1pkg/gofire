@@ -7,6 +7,7 @@ import (
 
 	"github.com/1pkg/gofire"
 	"github.com/1pkg/gofire/generators"
+	_ "github.com/1pkg/gofire/generators/cobra"
 	_ "github.com/1pkg/gofire/generators/flag"
 	_ "github.com/1pkg/gofire/generators/gofire.
 	_ "github.com/1pkg/gofire/generators/pflag"
@@ -113,7 +114,7 @@ func main() {
 			// },
 		},
 	}
-	if err := generators.Generate(context.TODO(), generators.DriverNamePFlag, cmd, os.Stdout); err != nil {
+	if err := generators.Generate(context.TODO(), generators.DriverNameCobra, cmd, os.Stdout); err != nil {
 		log.Fatal(err)
 	}
 }

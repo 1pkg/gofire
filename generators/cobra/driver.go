@@ -1,9 +1,8 @@
-package pflag
+package cobra
 
 import (
 	"bytes"
 	"fmt"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -12,7 +11,7 @@ import (
 )
 
 func init() {
-	generators.Register(generators.DriverNamePFlag, new(driver))
+	generators.Register(generators.DriverNameCobra, new(driver))
 }
 
 type driver struct {
@@ -25,37 +24,44 @@ type driver struct {
 
 func (d driver) Output(cmd gofire.Command) (string, error) {
 	var buf bytes.Buffer
-	if _, err := buf.WriteString(`
-		defer func() {
-			if err != nil {
-				pflag.PrintDefaults()
-			}
-		}()
-	`); err != nil {
+	if _, err := fmt.Fprintf(&buf, `
+		parse = func(ctx context.Context) (err error) {
+			%s
+			return
+		}
+	`, d.postParse.String()); err != nil {
 		return "", err
 	}
 	if _, err := buf.Write(d.preParse.Bytes()); err != nil {
 		return "", err
 	}
-	sort.Strings(d.usageList)
-	sort.Strings(d.printList)
-	u := strings.Join(d.usageList, "\n")
-	p := strings.Join(d.printList, "\n")
-	if _, err := fmt.Fprintf(&buf, `
-		pflag.Usage = func() {
-			_, _ = fmt.Fprintln(pflag.CommandLine.Output(), %q)
-			_, _ = fmt.Fprintln(pflag.CommandLine.Output(), %q)
-			_, _ = fmt.Fprintln(pflag.CommandLine.Output(), %q)
-		}
-	`, cmd.Doc, cmd.Function+" "+u, p); err != nil {
+	if _, err := buf.WriteString("err = cli.ExecuteContext(ctx)"); err != nil {
 		return "", err
 	}
-	if _, err := buf.WriteString("pflag.Parse()"); err != nil {
-		return "", err
-	}
-	if _, err := buf.Write(d.postParse.Bytes()); err != nil {
-		return "", err
-	}
+
+	// if _, err := buf.WriteString(`
+	// 	defer func() {
+	// 		if err != nil {
+	// 			pflag.PrintDefaults()
+	// 		}
+	// 	}()
+	// `); err != nil {
+	// 	return "", err
+	// }
+	// sort.Strings(d.usageList)
+	// sort.Strings(d.printList)
+	// u := strings.Join(d.usageList, "\n")
+	// p := strings.Join(d.printList, "\n")
+	// if _, err := fmt.Fprintf(&buf, `
+	// 	pflag.Usage = func() {
+	// 		_, _ = fmt.Fprintln(pflag.CommandLine.Output(), %q)
+	// 		_, _ = fmt.Fprintln(pflag.CommandLine.Output(), %q)
+	// 		_, _ = fmt.Fprintln(pflag.CommandLine.Output(), %q)
+	// 	}
+	// `, cmd.Doc, cmd.Function+" "+u, p); err != nil {
+	// 	return "", err
+	// }
+
 	return buf.String(), nil
 }
 
@@ -73,8 +79,37 @@ func (d driver) Imports() []string {
 		`"fmt"`,
 		`"strconv"`,
 		``,
-		`"github.com/spf13/pflag"`,
+		`"github.com/spf13/cobra"`,
 	}
+}
+
+func (d driver) Template() string {
+	return `
+		package {{.Package}}
+
+		import(
+			{{.Import}}
+		)
+		
+		func Command{{.Function}}(ctx context.Context) ({{.Return}}) {
+			{{.Vars}}
+			var cli *cobra.Command
+			var parse func(context.Context) error
+			cli = &cobra.Command{
+				RunE: func(cmd *cobra.Command, _ []string) (err error) {
+					ctx := cmd.Context()
+					if err = parse(ctx); err != nil {
+						retrun
+					}
+					{{.Groups}}
+					{{.Call}}
+					return
+				},
+			}
+			{{.Body}}
+			return
+		}
+	`
 }
 
 func (d *driver) VisitArgument(a gofire.Argument) error {
@@ -84,13 +119,13 @@ func (d *driver) VisitArgument(a gofire.Argument) error {
 	if !ok {
 		return fmt.Errorf(
 			"driver %s: non primitive argument types are not supported, got an argument %s %s",
-			generators.DriverNamePFlag,
+			generators.DriverNameCobra,
 			p.Name,
 			a.Type.Type(),
 		)
 	}
 	if err := d.argument(p.Name, a.Index, tp); err != nil {
-		return fmt.Errorf("driver %s: argument %w", generators.DriverNamePFlag, err)
+		return fmt.Errorf("driver %s: argument %w", generators.DriverNameCobra, err)
 	}
 	return nil
 }
@@ -104,7 +139,7 @@ func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 		typ = tprt.ETyp
 	}
 	if err := d.flag(p.Name, p.Alt, typ, ptr, f.Default, f.Doc, f.Deprecated, f.Hidden); err != nil {
-		return fmt.Errorf("driver %s: flag %w", generators.DriverNamePFlag, err)
+		return fmt.Errorf("driver %s: flag %w", generators.DriverNameCobra, err)
 	}
 	return nil
 }
@@ -117,10 +152,10 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive) error 
 			`
 				{	
 					const i = %d
-					if pflag.NArg() <= i {
+					if cli.Flags().NArg() <= i {
 						return fmt.Errorf("argument %%d-th is required", i)
 					}
-					v, err := strconv.ParseBool(pflag.Arg(i))
+					v, err := strconv.ParseBool(cli.Flags().Arg(i))
 					if err != nil {
 						return fmt.Errorf("argument %%d-th parse error: %%v", i, err)
 					}
@@ -137,10 +172,10 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive) error 
 			`
 				{
 					const i = %d
-					if pflag.NArg() <= i {
+					if cli.Flags().NArg() <= i {
 						return fmt.Errorf("argument %%d-th is required", i)
 					}
-					v, err := strconv.ParseInt(pflag.Arg(i), 10, %d)
+					v, err := strconv.ParseInt(cli.Flags().Arg(i), 10, %d)
 					if err != nil {
 						return fmt.Errorf("argument %%d-th parse error: %%v", i, err)
 					}
@@ -159,10 +194,10 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive) error 
 			`
 				{
 					const i = %d
-					if pflag.NArg() <= i {
+					if cli.Flags().NArg() <= i {
 						return fmt.Errorf("argument %%d-th is required", i)
 					}
-					v, err := strconv.ParseUint(pflag.Arg(i), 10, %d)
+					v, err := strconv.ParseUint(cli.Flags().Arg(i), 10, %d)
 					if err != nil {
 						return fmt.Errorf("argument %%d-th parse error: %%v", i, err)
 					}
@@ -181,10 +216,10 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive) error 
 			`
 				{
 					const i = %d
-					if pflag.NArg() <= i {
+					if cli.Flags().NArg() <= i {
 						return fmt.Errorf("argument %%d-th is required", i)
 					}
-					v, err := strconv.ParseFloat(pflag.Arg(i), %d)
+					v, err := strconv.ParseFloat(cli.Flags().Arg(i), %d)
 					if err != nil {
 						return fmt.Errorf("argument %%d-th parse error: %%v", i, err)
 					}
@@ -203,10 +238,10 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive) error 
 			`
 				{
 					const i = %d
-					if pflag.NArg() <= i {
+					if cli.Flags().NArg() <= i {
 						return fmt.Errorf("argument %%d-th is required", i)
 					}
-					%s = pflag.Arg(i)
+					%s = cli.Flags().Arg(i)
 				}
 			`,
 			index,
@@ -249,7 +284,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 			if _, err := fmt.Fprintf(&d.preParse,
 				`
 					var %s_ []bool
-					pflag.BoolSliceVarP(&%s_, %q, %q, %#v, %q)
+					cli.Flags().BoolSliceVarP(&%s_, %q, %q, %#v, %q)
 				`,
 				name,
 				name,
@@ -285,7 +320,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 			if _, err := fmt.Fprintf(&d.preParse,
 				`
 					var %s_ %s
-					pflag.%sSliceVarP(&%s_, %q, %q, %#v, %q)
+					cli.Flags().%sSliceVarP(&%s_, %q, %q, %#v, %q)
 				`,
 				name,
 				ts.Type(),
@@ -323,7 +358,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 			if _, err := fmt.Fprintf(&d.preParse,
 				`
 					var %s_ %s
-					pflag.%sSliceVarP(&%s_, %q, %q, %#v, %q)
+					cli.Flags().%sSliceVarP(&%s_, %q, %q, %#v, %q)
 				`,
 				name,
 				ts.Type(),
@@ -368,7 +403,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 		if _, err := fmt.Fprintf(&d.preParse,
 			`
 				var %s_ bool
-				pflag.BoolVarP(&%s_, %q, %q, %t, %q)
+				cli.Flags().BoolVarP(&%s_, %q, %q, %t, %q)
 			`,
 			name,
 			name,
@@ -405,7 +440,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 		if _, err := fmt.Fprintf(&d.preParse,
 			`
 				var %s_ %s
-				pflag.%sVarP(&%s_, %q, %q, %d, %q)
+				cli.Flags().%sVarP(&%s_, %q, %q, %d, %q)
 			`,
 			name,
 			t.Type(),
@@ -444,7 +479,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 		if _, err := fmt.Fprintf(&d.preParse,
 			`
 				var %s_ %s
-				pflag.%sVarP(&%s_, %q, %q, %d, %q)
+				cli.Flags().%sVarP(&%s_, %q, %q, %d, %q)
 			`,
 			name,
 			t.Type(),
@@ -483,7 +518,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 		if _, err := fmt.Fprintf(&d.preParse,
 			`
 				var %s_ %s
-				pflag.%sVarP(&%s_, %q, %q, %f, %q)
+				cli.Flags().%sVarP(&%s_, %q, %q, %f, %q)
 			`,
 			name,
 			t.Type(),
@@ -521,7 +556,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 		if _, err := fmt.Fprintf(&d.preParse,
 			`
 				var %s_ string
-				pflag.StringVar(&%s_, %q, %q, %q, %q)
+				cli.Flags().StringVar(&%s_, %q, %q, %q, %q)
 			`,
 			name,
 			name,
@@ -554,7 +589,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 	if deprecated {
 		if _, err := fmt.Fprintf(&d.preParse,
 			`
-				pflag.MarkDeprecated(%q, "deprecated: %s")
+				cli.Flags().MarkDeprecated(%q, "deprecated: %s")
 			`,
 			name,
 			doc,
@@ -563,7 +598,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 		}
 		if _, err := fmt.Fprintf(&d.preParse,
 			`
-				pflag.MarkShorthandDeprecated(%q, "deprecated: %s")
+				cli.Flags().MarkShorthandDeprecated(%q, "deprecated: %s")
 			`,
 			short,
 			doc,
@@ -574,7 +609,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 	if hidden {
 		if _, err := fmt.Fprintf(&d.preParse,
 			`
-				pflag.MarkHidden(%q)
+				cli.Flags().MarkHidden(%q)
 			`,
 			name,
 		); err != nil {

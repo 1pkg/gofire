@@ -13,6 +13,7 @@ const (
 	DriverNameGofire DriverName = "gofire"
 	DriverNameFlag  DriverName = "flag"
 	DriverNamePFlag DriverName = "pflag"
+	DriverNameCobra DriverName = "cobra"
 )
 
 type Reference string
@@ -91,6 +92,7 @@ func (d BaseDriver) Template() string {
 			{{.Vars}}
 			if err = func(ctx context.Context) (err error) {
 				{{.Body}}
+				{{.Groups}}
 				return
 			}(ctx); err != nil {
 				return
@@ -101,7 +103,7 @@ func (d BaseDriver) Template() string {
 	`
 }
 
-func (d BaseDriver) VisitPlaceholder(p gofire.Placeholder) error {
+func (d *BaseDriver) VisitPlaceholder(p gofire.Placeholder) error {
 	d.params = append(d.params, Parameter{
 		Name: fmt.Sprintf("p%d", len(d.params)),
 		Type: p.Type,

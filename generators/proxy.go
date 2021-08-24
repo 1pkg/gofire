@@ -83,6 +83,10 @@ func (p proxy) Vars() string {
 
 func (p proxy) Body() string {
 	out, _ := p.driver.Output(p.command)
+	return out
+}
+
+func (p proxy) Groups() string {
 	// collect all group assigns and append them to generated body.
 	var gassigns []string
 	for _, p := range p.driver.Parameters() {
@@ -90,7 +94,7 @@ func (p proxy) Body() string {
 			gassigns = append(gassigns, fmt.Sprintf("g%s=%s", *p.Ref, p.Name))
 		}
 	}
-	return out + strings.Join(gassigns, "\n")
+	return strings.Join(gassigns, "\n")
 }
 
 func (p proxy) Call() string {
