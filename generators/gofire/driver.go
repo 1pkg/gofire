@@ -110,7 +110,6 @@ func (d *driver) visit(p generators.Parameter, val *string) (err error) {
 		altKey := fmt.Sprintf("%q", p.Alt)
 		d.alternatives[key] = altKey
 	}
-	d.appendf(";") // help go parser to tokenize new lines mess.
 	d.typ(p.Name, key, p.Type, val)
 	return
 }
@@ -136,6 +135,8 @@ func (d *driver) typ(name, key string, t gofire.Typ, val *string) *driver {
 		return d.tslice(name, key, t.(gofire.TSlice), val)
 	case gofire.Map:
 		return d.tmap(name, key, t.(gofire.TMap), val)
+	case gofire.Ptr:
+		return nil // TODO
 	default:
 		panic(fmt.Errorf("unknown or ambiguous type %q can't be parsed %s", t.Type(), name))
 	}
