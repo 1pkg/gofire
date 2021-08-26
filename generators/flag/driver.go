@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/1pkg/gofire"
@@ -242,7 +241,7 @@ func (d *driver) flag(name string, t gofire.TPrimitive, ptr bool, val string, do
 	}
 	switch k {
 	case gofire.Bool:
-		v, err := d.parsev(name, t, val)
+		v, err := d.ParseTypeValue(t, val)
 		if err != nil || v == nil {
 			return fmt.Errorf(
 				"can't parse default value for a flag %s type %s: %w",
@@ -277,7 +276,7 @@ func (d *driver) flag(name string, t gofire.TPrimitive, ptr bool, val string, do
 			return err
 		}
 	case gofire.Int, gofire.Int8, gofire.Int16, gofire.Int32, gofire.Int64:
-		v, err := d.parsev(name, t, val)
+		v, err := d.ParseTypeValue(t, val)
 		if err != nil || v == nil {
 			return fmt.Errorf(
 				"can't parse default value for a flag %s type %s: %w",
@@ -327,7 +326,7 @@ func (d *driver) flag(name string, t gofire.TPrimitive, ptr bool, val string, do
 			return err
 		}
 	case gofire.Uint, gofire.Uint8, gofire.Uint16, gofire.Uint32, gofire.Uint64:
-		v, err := d.parsev(name, t, val)
+		v, err := d.ParseTypeValue(t, val)
 		if err != nil || v == nil {
 			return fmt.Errorf(
 				"can't parse default value for a flag %s type %s: %w",
@@ -377,7 +376,7 @@ func (d *driver) flag(name string, t gofire.TPrimitive, ptr bool, val string, do
 			return err
 		}
 	case gofire.Float32, gofire.Float64:
-		v, err := d.parsev(name, t, val)
+		v, err := d.ParseTypeValue(t, val)
 		if err != nil || v == nil {
 			return fmt.Errorf(
 				"can't parse default value for a flag %s type %s: %w",
@@ -418,7 +417,7 @@ func (d *driver) flag(name string, t gofire.TPrimitive, ptr bool, val string, do
 			return err
 		}
 	case gofire.String:
-		v, err := d.parsev(name, t, val)
+		v, err := d.ParseTypeValue(t, val)
 		if err != nil || v == nil {
 			return fmt.Errorf(
 				"can't parse default value for a flag %s type %s: %w",
@@ -462,34 +461,4 @@ func (d *driver) flag(name string, t gofire.TPrimitive, ptr bool, val string, do
 	d.usageList = append(d.usageList, fmt.Sprintf(`-%s=""`, name))
 	d.printList = append(d.printList, fmt.Sprintf("-%s %s %s (default %q)", name, t.Type(), doc, val))
 	return nil
-}
-
-func (d *driver) parsev(name string, t gofire.TPrimitive, val string) (interface{}, error) {
-	k := t.Kind()
-	switch k {
-	case gofire.Bool:
-		if val == "" {
-			return false, nil
-		}
-		return strconv.ParseBool(val)
-	case gofire.Int, gofire.Int8, gofire.Int16, gofire.Int32, gofire.Int64:
-		if val == "" {
-			return int64(0), nil
-		}
-		return strconv.ParseInt(val, 10, int(k.Base()))
-	case gofire.Uint, gofire.Uint8, gofire.Uint16, gofire.Uint32, gofire.Uint64:
-		if val == "" {
-			return uint64(0), nil
-		}
-		return strconv.ParseUint(val, 10, int(k.Base()))
-	case gofire.Float32, gofire.Float64:
-		if val == "" {
-			return float64(0.0), nil
-		}
-		return strconv.ParseFloat(val, int(k.Base()))
-	case gofire.String:
-		return val, nil
-	default:
-		return nil, nil
-	}
 }

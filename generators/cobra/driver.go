@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/1pkg/gofire"
@@ -271,7 +270,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 		etyp := ts.ETyp
 		switch etyp.Kind() {
 		case gofire.Bool:
-			v, err := d.parsev(name, t, val)
+			v, err := d.ParseTypeValue(t, val)
 			if err != nil || v == nil {
 				return fmt.Errorf(
 					"can't parse default value for a flag %s type %s: %w",
@@ -307,7 +306,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 				return err
 			}
 		case gofire.Int32, gofire.Int64:
-			v, err := d.parsev(name, t, val)
+			v, err := d.ParseTypeValue(t, val)
 			if err != nil || v == nil {
 				return fmt.Errorf(
 					"can't parse default value for a flag %s type %s: %w",
@@ -345,7 +344,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 				return err
 			}
 		case gofire.Float32, gofire.Float64:
-			v, err := d.parsev(name, t, val)
+			v, err := d.ParseTypeValue(t, val)
 			if err != nil || v == nil {
 				return fmt.Errorf(
 					"can't parse default value for a flag %s type %s: %w",
@@ -390,7 +389,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 			)
 		}
 	case gofire.Bool:
-		v, err := d.parsev(name, t, val)
+		v, err := d.ParseTypeValue(t, val)
 		if err != nil || v == nil {
 			return fmt.Errorf(
 				"can't parse default value for a flag %s type %s: %w",
@@ -426,7 +425,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 			return err
 		}
 	case gofire.Int, gofire.Int8, gofire.Int16, gofire.Int32, gofire.Int64:
-		v, err := d.parsev(name, t, val)
+		v, err := d.ParseTypeValue(t, val)
 		if err != nil || v == nil {
 			return fmt.Errorf(
 				"can't parse default value for a flag %s type %s: %w",
@@ -465,7 +464,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 			return err
 		}
 	case gofire.Uint, gofire.Uint8, gofire.Uint16, gofire.Uint32, gofire.Uint64:
-		v, err := d.parsev(name, t, val)
+		v, err := d.ParseTypeValue(t, val)
 		if err != nil || v == nil {
 			return fmt.Errorf(
 				"can't parse default value for a flag %s type %s: %w",
@@ -504,7 +503,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 			return err
 		}
 	case gofire.Float32, gofire.Float64:
-		v, err := d.parsev(name, t, val)
+		v, err := d.ParseTypeValue(t, val)
 		if err != nil || v == nil {
 			return fmt.Errorf(
 				"can't parse default value for a flag %s type %s: %w",
@@ -543,7 +542,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 			return err
 		}
 	case gofire.String:
-		v, err := d.parsev(name, t, val)
+		v, err := d.ParseTypeValue(t, val)
 		if err != nil || v == nil {
 			return fmt.Errorf(
 				"can't parse default value for a flag %s type %s: %w",
@@ -632,106 +631,4 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 		)
 	}
 	return nil
-}
-
-func (d *driver) parsev(name string, t gofire.Typ, val string) (interface{}, error) {
-	k := t.Kind()
-	switch k {
-	case gofire.Slice:
-		ts := t.(gofire.TSlice)
-		etyp := ts.ETyp
-		ek := etyp.Kind()
-		switch etyp.Kind() {
-		case gofire.Bool:
-			pvals, err := d.slice(val)
-			if err != nil {
-				return nil, err
-			}
-			v := make([]bool, 0, len(pvals))
-			for _, val := range pvals {
-				b, err := strconv.ParseBool(val)
-				if err != nil {
-					return nil, err
-				}
-				v = append(v, b)
-			}
-			return v, nil
-		case gofire.Int, gofire.Int8, gofire.Int16, gofire.Int32, gofire.Int64:
-			pvals, err := d.slice(val)
-			if err != nil {
-				return nil, err
-			}
-			v := make([]int64, 0, len(pvals))
-			for _, val := range pvals {
-				i, err := strconv.ParseInt(val, 10, int(ek.Base()))
-				if err != nil {
-					return nil, err
-				}
-				v = append(v, i)
-			}
-			return v, nil
-		case gofire.Uint, gofire.Uint8, gofire.Uint16, gofire.Uint32, gofire.Uint64:
-			pvals, err := d.slice(val)
-			if err != nil {
-				return nil, err
-			}
-			v := make([]uint64, 0, len(pvals))
-			for _, val := range pvals {
-				i, err := strconv.ParseUint(val, 10, int(ek.Base()))
-				if err != nil {
-					return nil, err
-				}
-				v = append(v, i)
-			}
-			return v, nil
-		case gofire.Float32, gofire.Float64:
-			pvals, err := d.slice(val)
-			if err != nil {
-				return nil, err
-			}
-			v := make([]float64, 0, len(pvals))
-			for _, val := range pvals {
-				f, err := strconv.ParseFloat(val, int(ek.Base()))
-				if err != nil {
-					return nil, err
-				}
-				v = append(v, f)
-			}
-			return v, nil
-		}
-	case gofire.Bool:
-		if val == "" {
-			return false, nil
-		}
-		return strconv.ParseBool(val)
-	case gofire.Int, gofire.Int8, gofire.Int16, gofire.Int32, gofire.Int64:
-		if val == "" {
-			return int64(0), nil
-		}
-		return strconv.ParseInt(val, 10, int(k.Base()))
-	case gofire.Uint, gofire.Uint8, gofire.Uint16, gofire.Uint32, gofire.Uint64:
-		if val == "" {
-			return uint64(0), nil
-		}
-		return strconv.ParseUint(val, 10, int(k.Base()))
-	case gofire.Float32, gofire.Float64:
-		if val == "" {
-			return float64(0.0), nil
-		}
-		return strconv.ParseFloat(val, int(k.Base()))
-	case gofire.String:
-		return val, nil
-	}
-	return nil, nil
-}
-
-func (d *driver) slice(val string) ([]string, error) {
-	pval := strings.ReplaceAll(val, " ", "")
-	if pval == "{}" || pval == "" {
-		return nil, nil
-	}
-	if !strings.HasPrefix(pval, "{") || !strings.HasSuffix(pval, "}") {
-		return nil, fmt.Errorf("invalid value %s can't be parsed as a slice", val)
-	}
-	return strings.Split(pval, ","), nil
 }
