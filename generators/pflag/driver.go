@@ -79,16 +79,20 @@ func (d driver) Imports() []string {
 func (d *driver) VisitArgument(a gofire.Argument) error {
 	_ = d.BaseDriver.VisitArgument(a)
 	p := d.Last()
-	tp, ok := a.Type.(gofire.TPrimitive)
+	typ := a.Type
+	if a.Ellipsis {
+		typ = a.Type.(gofire.TSlice).ETyp
+	}
+	tp, ok := typ.(gofire.TPrimitive)
 	if !ok {
 		return fmt.Errorf(
-			"driver %s: non primitive argument types are not supported, got an argument %s %s",
+			"driver %s: non primitive or ellipsis argument types are not supported, got an argument %s %s",
 			generators.DriverNamePFlag,
 			p.Name,
-			a.Type.Type(),
+			typ.Type(),
 		)
 	}
-	if err := d.argument(p.Name, a.Index, tp); err != nil {
+	if err := d.argument(p.Name, a.Index, tp, p.Ellipsis); err != nil {
 		return fmt.Errorf("driver %s: argument %w", generators.DriverNamePFlag, err)
 	}
 	return nil
@@ -108,12 +112,109 @@ func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 	return nil
 }
 
-func (d *driver) argument(name string, index uint64, t gofire.TPrimitive) error {
+func (d *driver) argument(name string, index uint64, t gofire.TPrimitive, ellipsis bool) error {
 	k := t.Kind()
-	switch k {
-	case gofire.Bool:
-		if _, err := fmt.Fprintf(&d.postParse,
-			`
+	if ellipsis {
+		switch k {
+		case gofire.Bool:
+			if _, err := fmt.Fprintf(&d.postParse,
+				`
+					for i := %d; i < pflag.NArg(); i++ {
+						v, err := strconv.ParseBool(pflag.Arg(i))
+						if err != nil {
+							return fmt.Errorf("argument %%d-th parse error: %%v", i, err)
+						}
+						%s = append(%s, v)
+					}
+				`,
+				index,
+				name,
+				name,
+			); err != nil {
+				return err
+			}
+		case gofire.Int, gofire.Int8, gofire.Int16, gofire.Int32, gofire.Int64:
+			if _, err := fmt.Fprintf(&d.postParse,
+				`
+					for i := %d; i < pflag.NArg(); i++ {
+						v, err := strconv.ParseInt(pflag.Arg(i), 10, %d)
+						if err != nil {
+							return fmt.Errorf("argument %%d-th parse error: %%v", i, err)
+						}
+						%s = append(%s, %s(v))
+					}
+				`,
+				index,
+				k.Base(),
+				name,
+				name,
+				k.Type(),
+			); err != nil {
+				return err
+			}
+		case gofire.Uint, gofire.Uint8, gofire.Uint16, gofire.Uint32, gofire.Uint64:
+			if _, err := fmt.Fprintf(&d.postParse,
+				`
+					for i := %d; i < pflag.NArg(); i++ {
+						v, err := strconv.ParseUint(pflag.Arg(i), 10, %d)
+						if err != nil {
+							return fmt.Errorf("argument %%d-th parse error: %%v", i, err)
+						}
+						%s = append(%s, %s(v))
+					}
+				`,
+				index,
+				k.Base(),
+				name,
+				name,
+				k.Type(),
+			); err != nil {
+				return err
+			}
+		case gofire.Float32, gofire.Float64:
+			if _, err := fmt.Fprintf(&d.postParse,
+				`
+					for i := %d; i < pflag.NArg(); i++ {
+						v, err := strconv.ParseFloat(pflag.Arg(i), %d)
+						if err != nil {
+							return fmt.Errorf("argument %%d-th parse error: %%v", i, err)
+						}
+						%s = append(%s, %s(v))
+					}
+				`,
+				index,
+				k.Base(),
+				name,
+				name,
+				k.Type(),
+			); err != nil {
+				return err
+			}
+		case gofire.String:
+			if _, err := fmt.Fprintf(&d.postParse,
+				`
+					for i := %d; i < pflag.NArg(); i++ {
+						%s =  append(%s, pflag.Arg(i))
+					}
+				`,
+				index,
+				name,
+				name,
+			); err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf(
+				"ellipsis type %s is not supported for an argument %s",
+				t.Type(),
+				name,
+			)
+		}
+	} else {
+		switch k {
+		case gofire.Bool:
+			if _, err := fmt.Fprintf(&d.postParse,
+				`
 				{	
 					const i = %d
 					if pflag.NArg() <= i {
@@ -126,14 +227,14 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive) error 
 					%s = v
 				}
 			`,
-			index,
-			name,
-		); err != nil {
-			return err
-		}
-	case gofire.Int, gofire.Int8, gofire.Int16, gofire.Int32, gofire.Int64:
-		if _, err := fmt.Fprintf(&d.postParse,
-			`
+				index,
+				name,
+			); err != nil {
+				return err
+			}
+		case gofire.Int, gofire.Int8, gofire.Int16, gofire.Int32, gofire.Int64:
+			if _, err := fmt.Fprintf(&d.postParse,
+				`
 				{
 					const i = %d
 					if pflag.NArg() <= i {
@@ -146,16 +247,16 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive) error 
 					%s = %s(v)
 				}
 			`,
-			index,
-			k.Base(),
-			name,
-			k.Type(),
-		); err != nil {
-			return err
-		}
-	case gofire.Uint, gofire.Uint8, gofire.Uint16, gofire.Uint32, gofire.Uint64:
-		if _, err := fmt.Fprintf(&d.postParse,
-			`
+				index,
+				k.Base(),
+				name,
+				k.Type(),
+			); err != nil {
+				return err
+			}
+		case gofire.Uint, gofire.Uint8, gofire.Uint16, gofire.Uint32, gofire.Uint64:
+			if _, err := fmt.Fprintf(&d.postParse,
+				`
 				{
 					const i = %d
 					if pflag.NArg() <= i {
@@ -168,16 +269,16 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive) error 
 					%s = %s(v)
 				}
 			`,
-			index,
-			k.Base(),
-			name,
-			k.Type(),
-		); err != nil {
-			return err
-		}
-	case gofire.Float32, gofire.Float64:
-		if _, err := fmt.Fprintf(&d.postParse,
-			`
+				index,
+				k.Base(),
+				name,
+				k.Type(),
+			); err != nil {
+				return err
+			}
+		case gofire.Float32, gofire.Float64:
+			if _, err := fmt.Fprintf(&d.postParse,
+				`
 				{
 					const i = %d
 					if pflag.NArg() <= i {
@@ -190,16 +291,16 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive) error 
 					%s = %s(v)
 				}
 			`,
-			index,
-			k.Base(),
-			name,
-			k.Type(),
-		); err != nil {
-			return err
-		}
-	case gofire.String:
-		if _, err := fmt.Fprintf(&d.postParse,
-			`
+				index,
+				k.Base(),
+				name,
+				k.Type(),
+			); err != nil {
+				return err
+			}
+		case gofire.String:
+			if _, err := fmt.Fprintf(&d.postParse,
+				`
 				{
 					const i = %d
 					if pflag.NArg() <= i {
@@ -208,20 +309,25 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive) error 
 					%s = pflag.Arg(i)
 				}
 			`,
-			index,
-			name,
-		); err != nil {
-			return err
+				index,
+				name,
+			); err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf(
+				"type %s is not supported for an argument %s",
+				t.Type(),
+				name,
+			)
 		}
-	default:
-		return fmt.Errorf(
-			"type %s is not supported for an argument %s",
-			t.Type(),
-			name,
-		)
+	}
+	symb := "arg"
+	if ellipsis {
+		symb += "..."
 	}
 	d.usageList = append(d.usageList, fmt.Sprintf("arg%d", index))
-	d.printList = append(d.printList, fmt.Sprintf("arg %d %s", index, t.Type()))
+	d.printList = append(d.printList, fmt.Sprintf("%s %d %s", symb, index, t.Type()))
 	return nil
 }
 

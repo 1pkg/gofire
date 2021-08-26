@@ -58,6 +58,15 @@ func main() {
 					TKind: gofire.Bool,
 				},
 			},
+			gofire.Argument{
+				Index:    2,
+				Ellipsis: true,
+				Type: gofire.TSlice{
+					ETyp: gofire.TPrimitive{
+						TKind: gofire.Uint16,
+					},
+				},
+			},
 			gofire.Group{
 				Name: "group",
 				Doc:  "some",
