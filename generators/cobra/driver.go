@@ -152,8 +152,8 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive, ellips
 		case gofire.Bool:
 			if _, err := fmt.Fprintf(&d.postParse,
 				`
-					for i := %d; i < pflag.NArg(); i++ {
-						v, err := strconv.ParseBool(pflag.Arg(i))
+					for i := %d; i < cli.Flags().NArg(); i++ {
+						v, err := strconv.ParseBool(cli.Flags().Arg(i))
 						if err != nil {
 							return fmt.Errorf("argument %%d-th parse error: %%v", i, err)
 						}
@@ -169,8 +169,8 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive, ellips
 		case gofire.Int, gofire.Int8, gofire.Int16, gofire.Int32, gofire.Int64:
 			if _, err := fmt.Fprintf(&d.postParse,
 				`
-					for i := %d; i < pflag.NArg(); i++ {
-						v, err := strconv.ParseInt(pflag.Arg(i), 10, %d)
+					for i := %d; i < cli.Flags().NArg(); i++ {
+						v, err := strconv.ParseInt(cli.Flags().Arg(i), 10, %d)
 						if err != nil {
 							return fmt.Errorf("argument %%d-th parse error: %%v", i, err)
 						}
@@ -188,8 +188,8 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive, ellips
 		case gofire.Uint, gofire.Uint8, gofire.Uint16, gofire.Uint32, gofire.Uint64:
 			if _, err := fmt.Fprintf(&d.postParse,
 				`
-					for i := %d; i < pflag.NArg(); i++ {
-						v, err := strconv.ParseUint(pflag.Arg(i), 10, %d)
+					for i := %d; i < cli.Flags().NArg(); i++ {
+						v, err := strconv.ParseUint(cli.Flags().Arg(i), 10, %d)
 						if err != nil {
 							return fmt.Errorf("argument %%d-th parse error: %%v", i, err)
 						}
@@ -207,8 +207,8 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive, ellips
 		case gofire.Float32, gofire.Float64:
 			if _, err := fmt.Fprintf(&d.postParse,
 				`
-					for i := %d; i < pflag.NArg(); i++ {
-						v, err := strconv.ParseFloat(pflag.Arg(i), %d)
+					for i := %d; i < cli.Flags().NArg(); i++ {
+						v, err := strconv.ParseFloat(cli.Flags().Arg(i), %d)
 						if err != nil {
 							return fmt.Errorf("argument %%d-th parse error: %%v", i, err)
 						}
@@ -226,8 +226,8 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive, ellips
 		case gofire.String:
 			if _, err := fmt.Fprintf(&d.postParse,
 				`
-					for i := %d; i < pflag.NArg(); i++ {
-						%s =  append(%s, pflag.Arg(i))
+					for i := %d; i < cli.Flags().NArg(); i++ {
+						%s =  append(%s, cli.Flags().Arg(i))
 					}
 				`,
 				index,

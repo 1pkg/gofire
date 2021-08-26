@@ -144,8 +144,8 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive, ellips
 		case gofire.Int, gofire.Int8, gofire.Int16, gofire.Int32, gofire.Int64:
 			if _, err := fmt.Fprintf(&d.postParse,
 				`
-					for i := %d; i < pflag.NArg(); i++ {
-						v, err := strconv.ParseInt(pflag.Arg(i), 10, %d)
+					for i := %d; i < flag.NArg(); i++ {
+						v, err := strconv.ParseInt(flag.Arg(i), 10, %d)
 						if err != nil {
 							return fmt.Errorf("argument %%d-th parse error: %%v", i, err)
 						}
@@ -163,8 +163,8 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive, ellips
 		case gofire.Uint, gofire.Uint8, gofire.Uint16, gofire.Uint32, gofire.Uint64:
 			if _, err := fmt.Fprintf(&d.postParse,
 				`
-					for i := %d; i < pflag.NArg(); i++ {
-						v, err := strconv.ParseUint(pflag.Arg(i), 10, %d)
+					for i := %d; i < flag.NArg(); i++ {
+						v, err := strconv.ParseUint(flag.Arg(i), 10, %d)
 						if err != nil {
 							return fmt.Errorf("argument %%d-th parse error: %%v", i, err)
 						}
@@ -183,8 +183,8 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive, ellips
 		case gofire.Float32, gofire.Float64:
 			if _, err := fmt.Fprintf(&d.postParse,
 				`
-					for i := %d; i < pflag.NArg(); i++ {
-						v, err := strconv.ParseFloat(pflag.Arg(i), %d)
+					for i := %d; i < flag.NArg(); i++ {
+						v, err := strconv.ParseFloat(flag.Arg(i), %d)
 						if err != nil {
 							return fmt.Errorf("argument %%d-th parse error: %%v", i, err)
 						}
@@ -202,8 +202,8 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive, ellips
 		case gofire.String:
 			if _, err := fmt.Fprintf(&d.postParse,
 				`
-					for i := %d; i < pflag.NArg(); i++ {
-						%s =  append(%s, pflag.Arg(i))
+					for i := %d; i < flag.NArg(); i++ {
+						%s =  append(%s, flag.Arg(i))
 					}
 				`,
 				index,
