@@ -24,13 +24,15 @@ type driver struct {
 
 func (d driver) Output(cmd gofire.Command) (string, error) {
 	var buf bytes.Buffer
-	if _, err := buf.WriteString(`
-		defer func() {
-			if err != nil {
-				pflag.PrintDefaults()
-			}
-		}()
-	`); err != nil {
+	if _, err := buf.WriteString(
+		`
+			defer func() {
+				if err != nil {
+					pflag.PrintDefaults()
+				}
+			}()
+		`,
+	); err != nil {
 		return "", err
 	}
 	if _, err := buf.Write(d.preParse.Bytes()); err != nil {
@@ -40,13 +42,19 @@ func (d driver) Output(cmd gofire.Command) (string, error) {
 	sort.Strings(d.printList)
 	u := strings.Join(d.usageList, "\n")
 	p := strings.Join(d.printList, "\n")
-	if _, err := fmt.Fprintf(&buf, `
-		pflag.Usage = func() {
-			_, _ = fmt.Fprintln(pflag.CommandLine.Output(), %q)
-			_, _ = fmt.Fprintln(pflag.CommandLine.Output(), %q)
-			_, _ = fmt.Fprintln(pflag.CommandLine.Output(), %q)
-		}
-	`, cmd.Doc, cmd.Function+" "+u, p); err != nil {
+	if _, err := fmt.Fprintf(
+		&buf,
+		`
+			pflag.Usage = func() {
+				_, _ = fmt.Fprintln(pflag.CommandLine.Output(), %q)
+				_, _ = fmt.Fprintln(pflag.CommandLine.Output(), %q)
+				_, _ = fmt.Fprintln(pflag.CommandLine.Output(), %q)
+			}
+		`,
+		cmd.Doc,
+		cmd.Function+" "+u,
+		p,
+	); err != nil {
 		return "", err
 	}
 	if _, err := buf.WriteString("pflag.Parse()"); err != nil {
@@ -71,7 +79,6 @@ func (d driver) Imports() []string {
 	return []string{
 		`"fmt"`,
 		`"strconv"`,
-		``,
 		`"github.com/spf13/pflag"`,
 	}
 }
@@ -215,18 +222,18 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive, ellips
 		case gofire.Bool:
 			if _, err := fmt.Fprintf(&d.postParse,
 				`
-				{	
-					const i = %d
-					if pflag.NArg() <= i {
-						return fmt.Errorf("argument %%d-th is required", i)
+					{	
+						const i = %d
+						if pflag.NArg() <= i {
+							return fmt.Errorf("argument %%d-th is required", i)
+						}
+						v, err := strconv.ParseBool(pflag.Arg(i))
+						if err != nil {
+							return fmt.Errorf("argument %%d-th parse error: %%v", i, err)
+						}
+						%s = v
 					}
-					v, err := strconv.ParseBool(pflag.Arg(i))
-					if err != nil {
-						return fmt.Errorf("argument %%d-th parse error: %%v", i, err)
-					}
-					%s = v
-				}
-			`,
+				`,
 				index,
 				name,
 			); err != nil {
@@ -235,18 +242,18 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive, ellips
 		case gofire.Int, gofire.Int8, gofire.Int16, gofire.Int32, gofire.Int64:
 			if _, err := fmt.Fprintf(&d.postParse,
 				`
-				{
-					const i = %d
-					if pflag.NArg() <= i {
-						return fmt.Errorf("argument %%d-th is required", i)
+					{
+						const i = %d
+						if pflag.NArg() <= i {
+							return fmt.Errorf("argument %%d-th is required", i)
+						}
+						v, err := strconv.ParseInt(pflag.Arg(i), 10, %d)
+						if err != nil {
+							return fmt.Errorf("argument %%d-th parse error: %%v", i, err)
+						}
+						%s = %s(v)
 					}
-					v, err := strconv.ParseInt(pflag.Arg(i), 10, %d)
-					if err != nil {
-						return fmt.Errorf("argument %%d-th parse error: %%v", i, err)
-					}
-					%s = %s(v)
-				}
-			`,
+				`,
 				index,
 				k.Base(),
 				name,
@@ -257,18 +264,18 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive, ellips
 		case gofire.Uint, gofire.Uint8, gofire.Uint16, gofire.Uint32, gofire.Uint64:
 			if _, err := fmt.Fprintf(&d.postParse,
 				`
-				{
-					const i = %d
-					if pflag.NArg() <= i {
-						return fmt.Errorf("argument %%d-th is required", i)
+					{
+						const i = %d
+						if pflag.NArg() <= i {
+							return fmt.Errorf("argument %%d-th is required", i)
+						}
+						v, err := strconv.ParseUint(pflag.Arg(i), 10, %d)
+						if err != nil {
+							return fmt.Errorf("argument %%d-th parse error: %%v", i, err)
+						}
+						%s = %s(v)
 					}
-					v, err := strconv.ParseUint(pflag.Arg(i), 10, %d)
-					if err != nil {
-						return fmt.Errorf("argument %%d-th parse error: %%v", i, err)
-					}
-					%s = %s(v)
-				}
-			`,
+				`,
 				index,
 				k.Base(),
 				name,
@@ -279,18 +286,18 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive, ellips
 		case gofire.Float32, gofire.Float64:
 			if _, err := fmt.Fprintf(&d.postParse,
 				`
-				{
-					const i = %d
-					if pflag.NArg() <= i {
-						return fmt.Errorf("argument %%d-th is required", i)
+					{
+						const i = %d
+						if pflag.NArg() <= i {
+							return fmt.Errorf("argument %%d-th is required", i)
+						}
+						v, err := strconv.ParseFloat(pflag.Arg(i), %d)
+						if err != nil {
+							return fmt.Errorf("argument %%d-th parse error: %%v", i, err)
+						}
+						%s = %s(v)
 					}
-					v, err := strconv.ParseFloat(pflag.Arg(i), %d)
-					if err != nil {
-						return fmt.Errorf("argument %%d-th parse error: %%v", i, err)
-					}
-					%s = %s(v)
-				}
-			`,
+				`,
 				index,
 				k.Base(),
 				name,
@@ -301,14 +308,14 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive, ellips
 		case gofire.String:
 			if _, err := fmt.Fprintf(&d.postParse,
 				`
-				{
-					const i = %d
-					if pflag.NArg() <= i {
-						return fmt.Errorf("argument %%d-th is required", i)
+					{
+						const i = %d
+						if pflag.NArg() <= i {
+							return fmt.Errorf("argument %%d-th is required", i)
+						}
+						%s = pflag.Arg(i)
 					}
-					%s = pflag.Arg(i)
-				}
-			`,
+				`,
 				index,
 				name,
 			); err != nil {

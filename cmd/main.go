@@ -7,10 +7,10 @@ import (
 
 	"github.com/1pkg/gofire"
 	"github.com/1pkg/gofire/generators"
+	_ "github.com/1pkg/gofire/generators/bubbletea"
 	_ "github.com/1pkg/gofire/generators/cobra"
 	_ "github.com/1pkg/gofire/generators/flag"
 	_ "github.com/1pkg/gofire/generators/gofire.
-	_ "github.com/1pkg/gofire/generators/pflag"
 )
 
 func main() {
@@ -23,29 +23,29 @@ func main() {
 		// aaaaaaaaaaaaa
 		`,
 		Context: true,
-		Results: []string{"int", "string", "error", "string", "error"},
+		Results: []string{"int", "error"},
 		Parameters: []gofire.Parameter{
-			gofire.Flag{
-				Full:  "aiiii",
-				Short: "z",
-				Type: gofire.TPtr{
-					ETyp: gofire.TPrimitive{
-						TKind: gofire.String,
-					},
-				},
-			},
-			gofire.Flag{
-				Full:  "aiiiiaa",
-				Short: "ttt",
-				Type: gofire.TPtr{
-					ETyp: gofire.TPrimitive{
-						TKind: gofire.Uint16,
-					},
-				},
-				Default:    "100",
-				Deprecated: true,
-				Doc:        "test",
-			},
+			// gofire.Flag{
+			// 	Full:  "aiiii",
+			// 	Short: "z",
+			// 	Type: gofire.TPtr{
+			// 		ETyp: gofire.TPrimitive{
+			// 			TKind: gofire.String,
+			// 		},
+			// 	},
+			// },
+			// gofire.Flag{
+			// 	Full:  "aiiiiaa",
+			// 	Short: "ttt",
+			// 	Type: gofire.TPtr{
+			// 		ETyp: gofire.TPrimitive{
+			// 			TKind: gofire.Uint16,
+			// 		},
+			// 	},
+			// 	Default:    "100",
+			// 	Deprecated: true,
+			// 	Doc:        "test",
+			// },
 			gofire.Argument{
 				Index: 0,
 				Type: gofire.TPrimitive{
@@ -58,31 +58,31 @@ func main() {
 					TKind: gofire.Bool,
 				},
 			},
-			gofire.Group{
-				Name: "group",
-				Doc:  "some",
-				Type: gofire.TStruct{Typ: "group"},
-				Flags: []gofire.Flag{
-					{
-						Full:  "aiiii",
-						Short: "z",
-						Type: gofire.TPtr{
-							ETyp: gofire.TPrimitive{
-								TKind: gofire.String,
-							},
-						},
-					},
-				},
-			},
-			gofire.Argument{
-				Index:    2,
-				Ellipsis: true,
-				Type: gofire.TSlice{
-					ETyp: gofire.TPrimitive{
-						TKind: gofire.Uint16,
-					},
-				},
-			},
+			// gofire.Group{
+			// 	Name: "group",
+			// 	Doc:  "some",
+			// 	Type: gofire.TStruct{Typ: "group"},
+			// 	Flags: []gofire.Flag{
+			// 		{
+			// 			Full:  "aiiii",
+			// 			Short: "z",
+			// 			Type: gofire.TPtr{
+			// 				ETyp: gofire.TPrimitive{
+			// 					TKind: gofire.String,
+			// 				},
+			// 			},
+			// 		},
+			// 	},
+			// },
+			// gofire.Argument{
+			// 	Index:    2,
+			// 	Ellipsis: true,
+			// 	Type: gofire.TSlice{
+			// 		ETyp: gofire.TPrimitive{
+			// 			TKind: gofire.Uint16,
+			// 		},
+			// 	},
+			// },
 			// gofire.Flag{
 			// 	Full:     "names",
 			// 	Optional: true,
@@ -123,7 +123,7 @@ func main() {
 			// },
 		},
 	}
-	if err := generators.Generate(context.TODO(), generators.DriverNameCobra, cmd, os.Stdout); err != nil {
+	if err := generators.Generate(context.TODO(), generators.DriverNameBubbleTea, cmd, os.Stdout); err != nil {
 		log.Fatal(err)
 	}
 }

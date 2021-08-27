@@ -25,12 +25,16 @@ type driver struct {
 
 func (d driver) Output(cmd gofire.Command) (string, error) {
 	var buf bytes.Buffer
-	if _, err := fmt.Fprintf(&buf, `
-		parse = func(ctx context.Context) (err error) {
-			%s
-			return
-		}
-	`, d.postParse.String()); err != nil {
+	if _, err := fmt.Fprintf(
+		&buf,
+		`
+			parse = func(ctx context.Context) (err error) {
+				%s
+				return
+			}
+		`,
+		d.postParse.String(),
+	); err != nil {
 		return "", err
 	}
 	if _, err := fmt.Fprintf(&buf, "cmd.Args = cobra.MinimumNArgs(%d);", d.nargs); err != nil {
@@ -75,7 +79,6 @@ func (d driver) Imports() []string {
 	return []string{
 		`"fmt"`,
 		`"strconv"`,
-		``,
 		`"github.com/spf13/cobra"`,
 	}
 }
@@ -268,18 +271,18 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive, ellips
 		case gofire.Int, gofire.Int8, gofire.Int16, gofire.Int32, gofire.Int64:
 			if _, err := fmt.Fprintf(&d.postParse,
 				`
-				{
-					const i = %d
-					if cli.Flags().NArg() <= i {
-						return fmt.Errorf("argument %%d-th is required", i)
+					{
+						const i = %d
+						if cli.Flags().NArg() <= i {
+							return fmt.Errorf("argument %%d-th is required", i)
+						}
+						v, err := strconv.ParseInt(cli.Flags().Arg(i), 10, %d)
+						if err != nil {
+							return fmt.Errorf("argument %%d-th parse error: %%v", i, err)
+						}
+						%s = %s(v)
 					}
-					v, err := strconv.ParseInt(cli.Flags().Arg(i), 10, %d)
-					if err != nil {
-						return fmt.Errorf("argument %%d-th parse error: %%v", i, err)
-					}
-					%s = %s(v)
-				}
-			`,
+				`,
 				index,
 				k.Base(),
 				name,
@@ -290,18 +293,18 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive, ellips
 		case gofire.Uint, gofire.Uint8, gofire.Uint16, gofire.Uint32, gofire.Uint64:
 			if _, err := fmt.Fprintf(&d.postParse,
 				`
-				{
-					const i = %d
-					if cli.Flags().NArg() <= i {
-						return fmt.Errorf("argument %%d-th is required", i)
+					{
+						const i = %d
+						if cli.Flags().NArg() <= i {
+							return fmt.Errorf("argument %%d-th is required", i)
+						}
+						v, err := strconv.ParseUint(cli.Flags().Arg(i), 10, %d)
+						if err != nil {
+							return fmt.Errorf("argument %%d-th parse error: %%v", i, err)
+						}
+						%s = %s(v)
 					}
-					v, err := strconv.ParseUint(cli.Flags().Arg(i), 10, %d)
-					if err != nil {
-						return fmt.Errorf("argument %%d-th parse error: %%v", i, err)
-					}
-					%s = %s(v)
-				}
-			`,
+				`,
 				index,
 				k.Base(),
 				name,
@@ -312,18 +315,18 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive, ellips
 		case gofire.Float32, gofire.Float64:
 			if _, err := fmt.Fprintf(&d.postParse,
 				`
-				{
-					const i = %d
-					if cli.Flags().NArg() <= i {
-						return fmt.Errorf("argument %%d-th is required", i)
+					{
+						const i = %d
+						if cli.Flags().NArg() <= i {
+							return fmt.Errorf("argument %%d-th is required", i)
+						}
+						v, err := strconv.ParseFloat(cli.Flags().Arg(i), %d)
+						if err != nil {
+							return fmt.Errorf("argument %%d-th parse error: %%v", i, err)
+						}
+						%s = %s(v)
 					}
-					v, err := strconv.ParseFloat(cli.Flags().Arg(i), %d)
-					if err != nil {
-						return fmt.Errorf("argument %%d-th parse error: %%v", i, err)
-					}
-					%s = %s(v)
-				}
-			`,
+				`,
 				index,
 				k.Base(),
 				name,
@@ -334,14 +337,14 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive, ellips
 		case gofire.String:
 			if _, err := fmt.Fprintf(&d.postParse,
 				`
-				{
-					const i = %d
-					if cli.Flags().NArg() <= i {
-						return fmt.Errorf("argument %%d-th is required", i)
+					{
+						const i = %d
+						if cli.Flags().NArg() <= i {
+							return fmt.Errorf("argument %%d-th is required", i)
+						}
+						%s = cli.Flags().Arg(i)
 					}
-					%s = cli.Flags().Arg(i)
-				}
-			`,
+				`,
 				index,
 				name,
 			); err != nil {

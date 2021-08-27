@@ -11,10 +11,11 @@ import (
 type DriverName string
 
 const (
-	DriverNameGofire DriverName = "gofire"
-	DriverNameFlag  DriverName = "flag"
-	DriverNamePFlag DriverName = "pflag"
-	DriverNameCobra DriverName = "cobra"
+	DriverNameGofire     DriverName = "gofire"
+	DriverNameFlag      DriverName = "flag"
+	DriverNamePFlag     DriverName = "pflag"
+	DriverNameCobra     DriverName = "cobra"
+	DriverNameBubbleTea DriverName = "bubbletea"
 )
 
 type Reference string
