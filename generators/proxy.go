@@ -110,8 +110,11 @@ func (p proxy) Call() string {
 	for i := range p.command.Results {
 		rnames = append(rnames, fmt.Sprintf("o%d", i))
 	}
-	// enrich call expression template with collected return call signature paramp.
-	return fmt.Sprintf("%s = %s", strings.Join(rnames, ", "), call)
+	// enrich call expression template with collected return call signature params.
+	if len(rnames) > 0 {
+		return fmt.Sprintf("%s = %s", strings.Join(rnames, ", "), call)
+	}
+	return call
 }
 
 type cached struct {
@@ -125,7 +128,7 @@ func (d *cached) Output(cmd gofire.Command) (string, error) {
 	}
 	out, err := d.Driver.Output(cmd)
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 	d.cache = out
 	return out, nil

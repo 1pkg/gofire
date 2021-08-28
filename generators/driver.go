@@ -70,6 +70,10 @@ func (d *BaseDriver) Reset() error {
 	return nil
 }
 
+func (d BaseDriver) Imports() []string {
+	return []string{}
+}
+
 func (d BaseDriver) Parameters() []Parameter {
 	return d.params
 }
