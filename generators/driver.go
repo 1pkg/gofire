@@ -160,14 +160,17 @@ func (d *BaseDriver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 
 func (BaseDriver) ParseTypeValue(t gofire.Typ, val string) (interface{}, error) {
 	slice := func(val string) ([]string, error) {
-		pval := strings.ReplaceAll(val, " ", "")
-		if pval == "{}" || pval == "" {
+		if val == "" || val == "{}" {
 			return nil, nil
 		}
-		if !strings.HasPrefix(pval, "{") || !strings.HasSuffix(pval, "}") {
-			return nil, fmt.Errorf("invalid value %s can't be parsed as a slice", val)
+		if !strings.HasPrefix(val, "{") || !strings.HasSuffix(val, "}") {
+			return nil, fmt.Errorf("invalid value %q can't be parsed as a slice", val)
 		}
-		return strings.Split(pval, ","), nil
+		val = val[:len(val)-1][1:]
+		if len(strings.Trim(val, " ")) == 0 {
+			return nil, nil
+		}
+		return strings.Split(val, ","), nil
 	}
 	k := t.Kind()
 	switch k {
@@ -183,7 +186,7 @@ func (BaseDriver) ParseTypeValue(t gofire.Typ, val string) (interface{}, error) 
 			}
 			v := make([]bool, 0, len(pvals))
 			for _, val := range pvals {
-				b, err := strconv.ParseBool(val)
+				b, err := strconv.ParseBool(strings.Trim(val, " "))
 				if err != nil {
 					return nil, err
 				}
@@ -197,7 +200,7 @@ func (BaseDriver) ParseTypeValue(t gofire.Typ, val string) (interface{}, error) 
 			}
 			v := make([]int64, 0, len(pvals))
 			for _, val := range pvals {
-				i, err := strconv.ParseInt(val, 10, int(ek.Base()))
+				i, err := strconv.ParseInt(strings.Trim(val, " "), 10, int(ek.Base()))
 				if err != nil {
 					return nil, err
 				}
@@ -211,7 +214,7 @@ func (BaseDriver) ParseTypeValue(t gofire.Typ, val string) (interface{}, error) 
 			}
 			v := make([]uint64, 0, len(pvals))
 			for _, val := range pvals {
-				i, err := strconv.ParseUint(val, 10, int(ek.Base()))
+				i, err := strconv.ParseUint(strings.Trim(val, " "), 10, int(ek.Base()))
 				if err != nil {
 					return nil, err
 				}
@@ -225,7 +228,7 @@ func (BaseDriver) ParseTypeValue(t gofire.Typ, val string) (interface{}, error) 
 			}
 			v := make([]float64, 0, len(pvals))
 			for _, val := range pvals {
-				f, err := strconv.ParseFloat(val, int(ek.Base()))
+				f, err := strconv.ParseFloat(strings.Trim(val, " "), int(ek.Base()))
 				if err != nil {
 					return nil, err
 				}
@@ -239,7 +242,7 @@ func (BaseDriver) ParseTypeValue(t gofire.Typ, val string) (interface{}, error) 
 			}
 			v := make([]complex128, 0, len(pvals))
 			for _, val := range pvals {
-				c, err := strconv.ParseComplex(val, int(ek.Base()))
+				c, err := strconv.ParseComplex(strings.Trim(val, " "), int(ek.Base()))
 				if err != nil {
 					return nil, err
 				}
@@ -247,7 +250,16 @@ func (BaseDriver) ParseTypeValue(t gofire.Typ, val string) (interface{}, error) 
 			}
 			return v, nil
 		case gofire.String:
-			return slice(val)
+			pvals, err := slice(val)
+			if err != nil {
+				return nil, err
+			}
+			v := make([]string, 0, len(pvals))
+			for _, val := range pvals {
+				s := strings.Replace(strings.Trim(val, " "), `"`, "", 2)
+				v = append(v, s)
+			}
+			return v, nil
 		}
 	case gofire.Bool:
 		if val == "" {

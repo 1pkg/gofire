@@ -3,6 +3,7 @@ package gofire
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io/fs"
 	"reflect"
 	"strings"
@@ -10,14 +11,24 @@ import (
 	"testing/fstest"
 )
 
+type mapfs struct {
+	fstest.MapFS
+	fileErr error
+	dirErr  error
+}
+
+func (fsm mapfs) ReadFile(name string) ([]byte, error) {
+	f, _ := fsm.MapFS.ReadFile(name)
+	return f, fsm.fileErr
+}
+
+func (fsm mapfs) ReadDir(name string) ([]fs.DirEntry, error) {
+	dir, _ := fsm.MapFS.ReadDir(name)
+	return dir, fsm.dirErr
+}
+
 func TestParse(t *testing.T) {
-	errMsg := func(err error) string {
-		if err == nil {
-			return "nil"
-		}
-		return err.Error()
-	}
-	escapeGO := func(body string) []byte {
+	escape := func(body string) []byte {
 		return []byte(strings.ReplaceAll(body, "#", "`"))
 	}
 	table := map[string]struct {
@@ -56,7 +67,7 @@ func TestParse(t *testing.T) {
 			ctx: context.TODO(),
 			dir: fstest.MapFS{
 				"file.go": {
-					Data: escapeGO(`
+					Data: escape(`
 						package foo1
 
 						import "context"
@@ -76,7 +87,7 @@ func TestParse(t *testing.T) {
 			ctx: context.TODO(),
 			dir: fstest.MapFS{
 				"file.go": {
-					Data: escapeGO(`
+					Data: escape(`
 						package foo
 
 						import "context" |
@@ -90,9 +101,9 @@ func TestParse(t *testing.T) {
 		},
 		"error in reading fs dir should produce expected error": {
 			ctx: context.TODO(),
-			dir: fsmock{MapFS: fstest.MapFS{
+			dir: mapfs{MapFS: fstest.MapFS{
 				"file.go": {
-					Data: escapeGO(`
+					Data: escape(`
 						package foo
 
 						import "context"
@@ -110,9 +121,9 @@ func TestParse(t *testing.T) {
 		},
 		"error in reading fs file should produce expected error": {
 			ctx: context.TODO(),
-			dir: fsmock{MapFS: fstest.MapFS{
+			dir: mapfs{MapFS: fstest.MapFS{
 				"file.go": {
-					Data: escapeGO(`
+					Data: escape(`
 						package foo
 
 						import "context"
@@ -132,7 +143,7 @@ func TestParse(t *testing.T) {
 			ctx: context.TODO(),
 			dir: fstest.MapFS{
 				"file.go": {
-					Data: escapeGO(`
+					Data: escape(`
 						package foo
 
 						import "context"
@@ -165,7 +176,7 @@ func TestParse(t *testing.T) {
 			ctx: context.TODO(),
 			dir: fstest.MapFS{
 				"file.go": {
-					Data: escapeGO(`
+					Data: escape(`
 						package foo
 
 						import "context"
@@ -199,7 +210,7 @@ func TestParse(t *testing.T) {
 			ctx: context.TODO(),
 			dir: fstest.MapFS{
 				"file.go": {
-					Data: escapeGO(`
+					Data: escape(`
 						package foo
 
 						import "context"
@@ -233,7 +244,7 @@ func TestParse(t *testing.T) {
 			ctx: context.TODO(),
 			dir: fstest.MapFS{
 				"file.go": {
-					Data: escapeGO(`
+					Data: escape(`
 						package foo
 
 						import "context"
@@ -267,7 +278,7 @@ func TestParse(t *testing.T) {
 			ctx: context.TODO(),
 			dir: fstest.MapFS{
 				"file.go": {
-					Data: escapeGO(`
+					Data: escape(`
 						package foo
 
 						import "context"
@@ -290,7 +301,7 @@ func TestParse(t *testing.T) {
 			ctx: context.TODO(),
 			dir: fstest.MapFS{
 				"file.go": {
-					Data: escapeGO(`
+					Data: escape(`
 						package foo
 
 						import "regexp"
@@ -309,7 +320,7 @@ func TestParse(t *testing.T) {
 			ctx: context.TODO(),
 			dir: fstest.MapFS{
 				"file.go": {
-					Data: escapeGO(`
+					Data: escape(`
 						package foo
 
 						func bar(int, int32, int64, z, ...int32) {
@@ -317,7 +328,7 @@ func TestParse(t *testing.T) {
 					`),
 				},
 				"struct.go": {
-					Data: escapeGO(`
+					Data: escape(`
 						package foo
 
 						// z a flag group
@@ -347,7 +358,7 @@ func TestParse(t *testing.T) {
 			ctx: context.TODO(),
 			dir: fstest.MapFS{
 				"file.go": {
-					Data: escapeGO(`
+					Data: escape(`
 						package foo
 
 						func bar(a int8, b []string, cz z, _ z) {
@@ -355,7 +366,7 @@ func TestParse(t *testing.T) {
 					`),
 				},
 				"struct.go": {
-					Data: escapeGO(`
+					Data: escape(`
 						package foo
 
 						// z a flag group
@@ -370,7 +381,7 @@ func TestParse(t *testing.T) {
 					`),
 				},
 				"interface.go": {
-					Data: escapeGO(`
+					Data: escape(`
 						package foo
 
 						// zi a empty iface
@@ -404,7 +415,7 @@ func TestParse(t *testing.T) {
 			ctx: context.TODO(),
 			dir: fstest.MapFS{
 				"file.go": {
-					Data: escapeGO(`
+					Data: escape(`
 						package foo
 
 						func bar(cz z) {
@@ -412,7 +423,7 @@ func TestParse(t *testing.T) {
 					`),
 				},
 				"struct.go": {
-					Data: escapeGO(`
+					Data: escape(`
 						package foo
 
 						// z a flag group
@@ -422,7 +433,7 @@ func TestParse(t *testing.T) {
 					`),
 				},
 				"interface.go": {
-					Data: escapeGO(`
+					Data: escape(`
 						package foo
 
 						// zi a empty iface
@@ -438,7 +449,7 @@ func TestParse(t *testing.T) {
 			ctx: context.TODO(),
 			dir: fstest.MapFS{
 				"file.go": {
-					Data: escapeGO(`
+					Data: escape(`
 						package foo
 
 						func bar(a int8, b []string, cz z) (r1, r2, r3 int){
@@ -447,7 +458,7 @@ func TestParse(t *testing.T) {
 					`),
 				},
 				"struct.go": {
-					Data: escapeGO(`
+					Data: escape(`
 						package foo
 
 						type z struct {
@@ -486,7 +497,7 @@ func TestParse(t *testing.T) {
 			ctx: context.TODO(),
 			dir: fstest.MapFS{
 				"file.go": {
-					Data: escapeGO(`
+					Data: escape(`
 						package foo
 
 						func bar(az z) {
@@ -494,7 +505,7 @@ func TestParse(t *testing.T) {
 					`),
 				},
 				"struct.go": {
-					Data: escapeGO(`
+					Data: escape(`
 						package foo
 
 						type z struct {
@@ -511,7 +522,7 @@ func TestParse(t *testing.T) {
 			ctx: context.TODO(),
 			dir: fstest.MapFS{
 				"file.go": {
-					Data: escapeGO(`
+					Data: escape(`
 						package foo
 
 						func bar(az z) {
@@ -519,7 +530,7 @@ func TestParse(t *testing.T) {
 					`),
 				},
 				"struct.go": {
-					Data: escapeGO(`
+					Data: escape(`
 						package foo
 
 						type z struct {
@@ -536,7 +547,7 @@ func TestParse(t *testing.T) {
 			ctx: context.TODO(),
 			dir: fstest.MapFS{
 				"file.go": {
-					Data: escapeGO(`
+					Data: escape(`
 						package foo
 
 						func bar(az z) {
@@ -544,7 +555,7 @@ func TestParse(t *testing.T) {
 					`),
 				},
 				"struct.go": {
-					Data: escapeGO(`
+					Data: escape(`
 						package foo
 
 						type z struct {
@@ -561,7 +572,7 @@ func TestParse(t *testing.T) {
 			ctx: context.TODO(),
 			dir: fstest.MapFS{
 				"file.go": {
-					Data: escapeGO(`
+					Data: escape(`
 						package foo
 
 						func bar(az z) {
@@ -569,7 +580,7 @@ func TestParse(t *testing.T) {
 					`),
 				},
 				"struct.go": {
-					Data: escapeGO(`
+					Data: escape(`
 						package foo
 
 						type z struct {
@@ -586,7 +597,7 @@ func TestParse(t *testing.T) {
 			ctx: context.TODO(),
 			dir: fstest.MapFS{
 				"file.go": {
-					Data: escapeGO(`
+					Data: escape(`
 						package foo
 
 						func bar(az z) {
@@ -594,7 +605,7 @@ func TestParse(t *testing.T) {
 					`),
 				},
 				"struct.go": {
-					Data: escapeGO(`
+					Data: escape(`
 						package foo
 
 						type z struct {
@@ -611,28 +622,12 @@ func TestParse(t *testing.T) {
 	for tname, tcase := range table {
 		t.Run(tname, func(t *testing.T) {
 			cmd, err := Parse(tcase.ctx, tcase.dir, tcase.pckg, tcase.function)
-			if errMsg(tcase.err) != errMsg(err) {
-				t.Fatalf("expected error message %q but got %q", errMsg(tcase.err), errMsg(err))
+			if fmt.Sprintf("%v", tcase.err) != fmt.Sprintf("%v", err) {
+				t.Fatalf("expected error message %q but got %q", tcase.err, err)
 			}
 			if !reflect.DeepEqual(tcase.cmd, cmd) {
 				t.Fatalf("expected cmd %#v but got %#v", tcase.cmd, cmd)
 			}
 		})
 	}
-}
-
-type fsmock struct {
-	fstest.MapFS
-	fileErr error
-	dirErr  error
-}
-
-func (fsm fsmock) ReadFile(name string) ([]byte, error) {
-	f, _ := fsm.MapFS.ReadFile(name)
-	return f, fsm.fileErr
-}
-
-func (fsm fsmock) ReadDir(name string) ([]fs.DirEntry, error) {
-	dir, _ := fsm.MapFS.ReadDir(name)
-	return dir, fsm.dirErr
 }
