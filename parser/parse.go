@@ -1,4 +1,4 @@
-package gofire
+package parser
 
 import (
 	"bytes"
@@ -10,10 +10,12 @@ import (
 	"io/fs"
 	"strconv"
 	"strings"
+
+	"github.com/1pkg/gofire"
 )
 
 // Parse tries to parse the function from provided ast into command type.
-func Parse(ctx context.Context, dir fs.FS, pckg, function string) (*Command, error) {
+func Parse(ctx context.Context, dir fs.FS, pckg, function string) (*gofire.Command, error) {
 	// Start with parsing actual ast from fs driver.
 	fentries, err := fs.ReadDir(dir, ".")
 	if err != nil {
@@ -42,7 +44,7 @@ func Parse(ctx context.Context, dir fs.FS, pckg, function string) (*Command, err
 	}
 	// Now as ast is parsed successfully parse it into command.
 	p := make(parser)
-	var fparse func(context.Context) (*Command, error)
+	var fparse func(context.Context) (*gofire.Command, error)
 	for _, file := range files {
 		// Visit all types inide the package to build flag groups.
 		for _, decl := range file.ast.Decls {
@@ -67,8 +69,8 @@ func Parse(ctx context.Context, dir fs.FS, pckg, function string) (*Command, err
 			// we will process it later after the visit loop.
 			file := file
 			if fdecl, ok := decl.(*ast.FuncDecl); ok && fdecl.Name.Name == function {
-				fparse = func(context.Context) (*Command, error) {
-					var cmd Command
+				fparse = func(context.Context) (*gofire.Command, error) {
+					var cmd gofire.Command
 					cmd.Package = pckg
 					cmd.Function = function
 					cmd.Doc = strings.TrimSpace(fdecl.Doc.Text())
@@ -108,7 +110,7 @@ func (f file) definition(pos, end token.Pos) string {
 	return f.buf.String()[fpos.Offset:fend.Offset]
 }
 
-type parser map[string]Group
+type parser map[string]gofire.Group
 
 func (p parser) results(f file, fdecl *ast.FuncDecl) (results []string) {
 	var list []*ast.Field
@@ -128,7 +130,7 @@ func (p parser) results(f file, fdecl *ast.FuncDecl) (results []string) {
 	return
 }
 
-func (p *parser) parameters(f file, fdecl *ast.FuncDecl) (parameters []Parameter, context bool, err error) {
+func (p *parser) parameters(f file, fdecl *ast.FuncDecl) (parameters []gofire.Parameter, context bool, err error) {
 	var arg uint64
 	var list []*ast.Field
 	if fdecl.Type.Params != nil {
@@ -146,14 +148,14 @@ func (p *parser) parameters(f file, fdecl *ast.FuncDecl) (parameters []Parameter
 		if ok {
 			// Check if we need just a type placeholder instead of rich parameter.
 			if n == 0 {
-				parameters = append(parameters, Placeholder{Type: g.Type})
+				parameters = append(parameters, gofire.Placeholder{Type: g.Type})
 				continue
 			}
 			for i := 0; i < n; i++ {
 				name := param.Names[i].Name
 				// Check if we need just a type placeholder instead of rich parameter.
 				if name == "_" {
-					parameters = append(parameters, Placeholder{Type: g.Type})
+					parameters = append(parameters, gofire.Placeholder{Type: g.Type})
 					continue
 				}
 				group := *g
@@ -184,19 +186,19 @@ func (p *parser) parameters(f file, fdecl *ast.FuncDecl) (parameters []Parameter
 		}
 		// Check if we need just a type placeholder instead of rich parameter.
 		if n == 0 {
-			parameters = append(parameters, Placeholder{Type: typ})
+			parameters = append(parameters, gofire.Placeholder{Type: typ})
 			continue
 		}
 		for i := 0; i < n; i++ {
 			name := param.Names[i].Name
 			// Check if we need just a type placeholder instead of rich parameter.
 			if name == "_" {
-				parameters = append(parameters, Placeholder{Type: typ})
+				parameters = append(parameters, gofire.Placeholder{Type: typ})
 				continue
 			}
 			// In case type of parameter is pointer we define it as autoflag.
-			if ptr, ok := typ.(TPtr); ok {
-				parameters = append(parameters, Flag{
+			if ptr, ok := typ.(gofire.TPtr); ok {
+				parameters = append(parameters, gofire.Flag{
 					Full:    name,
 					Default: ptr.ETyp.Kind().Default(),
 					Type:    typ,
@@ -204,7 +206,7 @@ func (p *parser) parameters(f file, fdecl *ast.FuncDecl) (parameters []Parameter
 				continue
 			}
 			// Otherwise parameter is positional argument.
-			parameters = append(parameters, Argument{
+			parameters = append(parameters, gofire.Argument{
 				Index:    uint64(arg),
 				Ellipsis: ellipsis,
 				Type:     typ,
@@ -221,14 +223,14 @@ func (p *parser) register(f file, gendecl *ast.GenDecl, tspec *ast.TypeSpec) err
 	if !ok {
 		return nil
 	}
-	var g Group
+	var g gofire.Group
 	g.Name = tspec.Name.Name
 	if tspec.Doc != nil {
 		g.Doc = strings.TrimSpace(tspec.Doc.Text())
 	} else {
 		g.Doc = strings.TrimSpace(gendecl.Doc.Text())
 	}
-	g.Type = TStruct{Typ: g.Name}
+	g.Type = gofire.TStruct{Typ: g.Name}
 	for _, field := range stype.Fields.List {
 		// In case no flag names provided we can skip the embedded field.
 		if len(field.Names) == 0 {
@@ -289,7 +291,7 @@ func (p parser) context(tp ast.Expr) bool {
 	return false
 }
 
-func (p parser) group(tp ast.Expr) (*Group, bool) {
+func (p parser) group(tp ast.Expr) (*gofire.Group, bool) {
 	g, ok := tp.(*ast.Ident)
 	if ok {
 		g, ok := p[g.Name]
@@ -298,54 +300,54 @@ func (p parser) group(tp ast.Expr) (*Group, bool) {
 	return nil, false
 }
 
-func (p parser) typ(tp ast.Expr) (Typ, error) {
+func (p parser) typ(tp ast.Expr) (gofire.Typ, error) {
 	switch tt := tp.(type) {
 	case *ast.Ident:
-		var k Kind
+		var k gofire.Kind
 		switch tt.Name {
-		case Bool.Type():
-			k = Bool
-		case Int.Type():
-			k = Int
-		case Int8.Type():
-			k = Int8
-		case Int16.Type():
-			k = Int16
-		case Int32.Type():
-			k = Int32
-		case Int64.Type():
-			k = Int64
-		case Uint.Type():
-			k = Uint
-		case Uint8.Type():
-			k = Uint8
-		case Uint16.Type():
-			k = Uint16
-		case Uint32.Type():
-			k = Uint32
-		case Uint64.Type():
-			k = Uint64
-		case Float32.Type():
-			k = Float32
-		case Float64.Type():
-			k = Float64
-		case Complex64.Type():
-			k = Complex64
-		case Complex128.Type():
-			k = Complex128
-		case String.Type():
-			k = String
+		case gofire.Bool.Type():
+			k = gofire.Bool
+		case gofire.Int.Type():
+			k = gofire.Int
+		case gofire.Int8.Type():
+			k = gofire.Int8
+		case gofire.Int16.Type():
+			k = gofire.Int16
+		case gofire.Int32.Type():
+			k = gofire.Int32
+		case gofire.Int64.Type():
+			k = gofire.Int64
+		case gofire.Uint.Type():
+			k = gofire.Uint
+		case gofire.Uint8.Type():
+			k = gofire.Uint8
+		case gofire.Uint16.Type():
+			k = gofire.Uint16
+		case gofire.Uint32.Type():
+			k = gofire.Uint32
+		case gofire.Uint64.Type():
+			k = gofire.Uint64
+		case gofire.Float32.Type():
+			k = gofire.Float32
+		case gofire.Float64.Type():
+			k = gofire.Float64
+		case gofire.Complex64.Type():
+			k = gofire.Complex64
+		case gofire.Complex128.Type():
+			k = gofire.Complex128
+		case gofire.String.Type():
+			k = gofire.String
 		default:
 			return nil, fmt.Errorf("unsupported primitive type %s", k.Type())
 		}
-		return TPrimitive{TKind: k}, nil
+		return gofire.TPrimitive{TKind: k}, nil
 	case *ast.ArrayType:
 		etyp, err := p.typ(tt.Elt)
 		if err != nil {
 			return nil, err
 		}
 		if tt.Len == nil {
-			return TSlice{ETyp: etyp}, nil
+			return gofire.TSlice{ETyp: etyp}, nil
 		}
 		lit, ok := tt.Len.(*ast.BasicLit)
 		if !ok || lit.Kind != token.INT {
@@ -355,7 +357,7 @@ func (p parser) typ(tp ast.Expr) (Typ, error) {
 		if err != nil {
 			return nil, fmt.Errorf("unsupported array size literal value %s", lit.Value)
 		}
-		return TArray{ETyp: etyp, Size: size}, nil
+		return gofire.TArray{ETyp: etyp, Size: size}, nil
 	case *ast.MapType:
 		ktyp, err := p.typ(tt.Key)
 		if err != nil {
@@ -365,20 +367,20 @@ func (p parser) typ(tp ast.Expr) (Typ, error) {
 		if err != nil {
 			return nil, err
 		}
-		return TMap{KTyp: ktyp, VTyp: vtyp}, nil
+		return gofire.TMap{KTyp: ktyp, VTyp: vtyp}, nil
 	case *ast.StarExpr:
 		etyp, err := p.typ(tt.X)
 		if err != nil {
 			return nil, err
 		}
-		return TPtr{ETyp: etyp}, nil
+		return gofire.TPtr{ETyp: etyp}, nil
 	default:
 		return nil, fmt.Errorf("unsupported complex type")
 	}
 }
 
-func (p parser) tagflag(rawTag string) (*Flag, bool, error) {
-	var f Flag
+func (p parser) tagflag(rawTag string) (*gofire.Flag, bool, error) {
+	var f gofire.Flag
 	// Skip empty tags they will be transformed into auto flags.
 	if rawTag == "" {
 		return &f, false, nil
