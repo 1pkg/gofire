@@ -32,7 +32,7 @@ func Register(name DriverName, driver Driver) {
 	if _, dup := drivers[name]; dup {
 		panic(fmt.Errorf("register called twice for driver %q", name))
 	}
-	drivers[name] = driver
+	drivers[name] = annotation{driver}
 }
 
 // Generate generates cli command using provided driver to provided writer output.
@@ -63,16 +63,19 @@ func Generate(ctx context.Context, name DriverName, cmd gofire.Command, w io.Wri
 	}
 	src := []byte(
 		strings.Trim(
-			stripnl.ReplaceAllString(
-				strips.ReplaceAllString(buf.String(), " "),
-				"\n",
+			strings.TrimSpace(
+				stripnl.ReplaceAllString(
+					strips.ReplaceAllString(buf.String(), " "),
+					"\n",
+				),
 			),
-			"\n\t ",
+			"\n",
 		),
 	)
 	if src, err = imports.Process("", src, nil); err != nil {
 		return err
 	}
+	fmt.Println(string(src))
 	if _, err := w.Write(src); err != nil {
 		return err
 	}

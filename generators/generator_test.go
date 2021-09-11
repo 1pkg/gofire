@@ -47,9 +47,12 @@ func TestGeneratorRegister(t *testing.T) {
 		}(t)
 		Register(DriverName("test_register"), nil)
 	})
-	t.Run("should panic on duplicated driver", func(t *testing.T) {
+	t.Run("should not panic on valid driver", func(t *testing.T) {
 		d := &driver{}
 		Register(DriverName("test_register"), d)
+	})
+	t.Run("should panic on duplicated driver", func(t *testing.T) {
+		d := &driver{}
 		defer func(t *testing.T) {
 			if err := recover(); fmt.Sprintf("%v", err) != `register called twice for driver "test_register"` {
 				t.Fatalf("register should panic on duplicated driver with message %q", err)
@@ -100,7 +103,7 @@ func TestGeneratorGenerate(t *testing.T) {
 			return "{{"
 		}
 		err := Generate(context.TODO(), DriverName("test_generate"), gofire.Command{}, nil)
-		if fmt.Sprintf("%v", err) != "template: gen:1: unclosed action" {
+		if fmt.Sprintf("%v", err) != `template: gen:4: unexpected "{" in command` {
 			t.Fatalf("generate should fail on driver broken template error with message %q", err)
 		}
 	})
@@ -115,7 +118,7 @@ func TestGeneratorGenerate(t *testing.T) {
 			return "{{.Error}}"
 		}
 		err := Generate(context.TODO(), DriverName("test_generate"), gofire.Command{}, nil)
-		if fmt.Sprintf("%v", err) != `template: gen:1:2: executing "gen" at <.Error>: can't evaluate field Error in type generators.proxy` {
+		if fmt.Sprintf("%v", err) != `template: gen:3:3: executing "gen" at <.Error>: can't evaluate field Error in type generators.proxy` {
 			t.Fatalf("generate should fail on driver template expanding error with message %q", err)
 		}
 	})
@@ -130,7 +133,7 @@ func TestGeneratorGenerate(t *testing.T) {
 			return "func {{.Import}}"
 		}
 		err := Generate(context.TODO(), DriverName("test_generate"), gofire.Command{}, nil)
-		if fmt.Sprintf("%v", err) != "1:1: expected 'package', found 'func'" {
+		if fmt.Sprintf("%v", err) != "2:2: expected 'package', found 'func'" {
 			t.Fatalf("generate should fail on driver code formating error with message %q", err)
 		}
 	})
@@ -163,7 +166,7 @@ func TestGeneratorGenerate(t *testing.T) {
 		d.template = nil
 		var buf bytes.Buffer
 		cmd := gofire.Command{
-			Package:  "test_package",
+			Package:  "main",
 			Function: "test_function",
 			Doc:      "test_doc",
 			Context:  true,

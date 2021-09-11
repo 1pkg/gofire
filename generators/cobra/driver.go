@@ -91,7 +91,8 @@ func (d driver) Template() string {
 			{{.Import}}
 		)
 		
-		func Command{{.Function}}(ctx context.Context) ({{.Return}}) {
+		{{.Doc}}
+		func {{.Function}}(ctx context.Context) ({{.Return}}) {
 			{{.Vars}}
 			var cli *cobra.Command
 			var parse func(context.Context) error

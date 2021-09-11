@@ -3,6 +3,8 @@ package bubbletea
 import (
 	"bytes"
 	"fmt"
+	"math/rand"
+	"time"
 
 	"github.com/1pkg/gofire"
 	"github.com/1pkg/gofire/generators"
@@ -76,24 +78,26 @@ func (d driver) Imports() []string {
 }
 
 func (d driver) Template() string {
-	return `
+	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
+	prefix := fmt.Sprintf("%x", rnd.Uint64())
+	return fmt.Sprintf(`
 		package {{.Package}}
 
 		import(
 			{{.Import}}
 		)
 
-		type _model{{.Function}} struct {
+		type %s{{.Function}} struct {
 			index	int
 			inputs	[]textinput.Model
 			err		error
 		}
 
-		func (_model{{.Function}}) Init() bubbletea.Cmd {
+		func (%s{{.Function}}) Init() bubbletea.Cmd {
 			return textinput.Blink
 		}
 		
-		func (m *_model{{.Function}}) Update(msg bubbletea.Msg) (bubbletea.Model, bubbletea.Cmd) {
+		func (m *%s{{.Function}}) Update(msg bubbletea.Msg) (bubbletea.Model, bubbletea.Cmd) {
 			kmsg, ok := msg.(bubbletea.KeyMsg)
 			if !ok {
 				m.err = fmt.Errorf("received unexpected message %%v", msg)
@@ -135,7 +139,7 @@ func (d driver) Template() string {
 			}
 		}
 		
-		func (m _model{{.Function}}) View() string {
+		func (m %s{{.Function}}) View() string {
 			var b strings.Builder
 			for i := range m.inputs {
 				b.WriteString(m.inputs[i].View())
@@ -147,15 +151,16 @@ func (d driver) Template() string {
 			return b.String()
 		}
 		
-		func Command{{.Function}}(ctx context.Context) ({{.Return}}) {
+		{{.Doc}}
+		func {{.Function}}(ctx context.Context) ({{.Return}}) {
 			{{.Vars}}
-			m := new(_model{{.Function}})
+			m := new(%s{{.Function}})
 			{{.Body}}
 			{{.Groups}}
 			{{.Call}}
 			return
 		}
-	`
+	`, prefix, prefix, prefix, prefix, prefix)
 }
 
 func (d *driver) VisitArgument(a gofire.Argument) error {

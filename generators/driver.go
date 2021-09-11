@@ -94,7 +94,8 @@ func (d BaseDriver) Template() string {
 			{{.Import}}
 		)
 		
-		func Command{{.Function}}(ctx context.Context) ({{.Return}}) {
+		{{.Doc}}
+		func {{.Function}}(ctx context.Context) ({{.Return}}) {
 			{{.Vars}}
 			if err = func(ctx context.Context) (err error) {
 				{{.Body}}
@@ -167,7 +168,7 @@ func (BaseDriver) ParseTypeValue(t gofire.Typ, val string) (interface{}, error) 
 			return nil, fmt.Errorf("invalid value %q can't be parsed as a slice", val)
 		}
 		val = val[:len(val)-1][1:]
-		if len(strings.Trim(val, " ")) == 0 {
+		if len(strings.TrimSpace(val)) == 0 {
 			return nil, nil
 		}
 		return strings.Split(val, ","), nil
@@ -186,7 +187,7 @@ func (BaseDriver) ParseTypeValue(t gofire.Typ, val string) (interface{}, error) 
 			}
 			v := make([]bool, 0, len(pvals))
 			for _, val := range pvals {
-				b, err := strconv.ParseBool(strings.Trim(val, " "))
+				b, err := strconv.ParseBool(strings.TrimSpace(val))
 				if err != nil {
 					return nil, err
 				}
@@ -200,7 +201,7 @@ func (BaseDriver) ParseTypeValue(t gofire.Typ, val string) (interface{}, error) 
 			}
 			v := make([]int64, 0, len(pvals))
 			for _, val := range pvals {
-				i, err := strconv.ParseInt(strings.Trim(val, " "), 10, int(ek.Base()))
+				i, err := strconv.ParseInt(strings.TrimSpace(val), 10, int(ek.Base()))
 				if err != nil {
 					return nil, err
 				}
@@ -214,7 +215,7 @@ func (BaseDriver) ParseTypeValue(t gofire.Typ, val string) (interface{}, error) 
 			}
 			v := make([]uint64, 0, len(pvals))
 			for _, val := range pvals {
-				i, err := strconv.ParseUint(strings.Trim(val, " "), 10, int(ek.Base()))
+				i, err := strconv.ParseUint(strings.TrimSpace(val), 10, int(ek.Base()))
 				if err != nil {
 					return nil, err
 				}
@@ -228,7 +229,7 @@ func (BaseDriver) ParseTypeValue(t gofire.Typ, val string) (interface{}, error) 
 			}
 			v := make([]float64, 0, len(pvals))
 			for _, val := range pvals {
-				f, err := strconv.ParseFloat(strings.Trim(val, " "), int(ek.Base()))
+				f, err := strconv.ParseFloat(strings.TrimSpace(val), int(ek.Base()))
 				if err != nil {
 					return nil, err
 				}
@@ -242,7 +243,7 @@ func (BaseDriver) ParseTypeValue(t gofire.Typ, val string) (interface{}, error) 
 			}
 			v := make([]complex128, 0, len(pvals))
 			for _, val := range pvals {
-				c, err := strconv.ParseComplex(strings.Trim(val, " "), int(ek.Base()))
+				c, err := strconv.ParseComplex(strings.TrimSpace(val), int(ek.Base()))
 				if err != nil {
 					return nil, err
 				}
@@ -256,7 +257,7 @@ func (BaseDriver) ParseTypeValue(t gofire.Typ, val string) (interface{}, error) 
 			}
 			v := make([]string, 0, len(pvals))
 			for _, val := range pvals {
-				s := strings.Replace(strings.Trim(val, " "), `"`, "", 2)
+				s := strings.Replace(strings.TrimSpace(val), `"`, "", 2)
 				v = append(v, s)
 			}
 			return v, nil
@@ -290,4 +291,36 @@ func (BaseDriver) ParseTypeValue(t gofire.Typ, val string) (interface{}, error) 
 		return val, nil
 	}
 	return nil, nil
+}
+
+type annotation struct {
+	Driver
+}
+
+func (d annotation) Imports() []string {
+	return append(d.Driver.Imports(), `"log"`, `"os"`, `"os/signal"`)
+}
+
+func (d annotation) Template() string {
+	return `
+		// TODO annotation goes here
+	` + d.Driver.Template() + `
+		{{ if eq .Package "main" }}
+			func main() {
+				ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+				defer stop()
+				{{ if eq .Result "" }}
+					err := {{.Function}}(ctx)
+				{{ else }}
+					{{.Result}}, err := {{.Function}}(ctx)
+				{{ end }}
+				if err != nil {
+					log.Fatal(err)
+				}
+				{{ if ne .Result "" }}
+					log.Printf({{.Result}})
+				{{ end }}
+			}
+		{{ end }}
+	`
 }
