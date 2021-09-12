@@ -7,7 +7,7 @@ type annotation struct {
 }
 
 func Annotated(d generators.Driver) generators.Driver {
-	return annotation{d}
+	return annotation{Driver: d}
 }
 
 func (d annotation) Imports() []string {

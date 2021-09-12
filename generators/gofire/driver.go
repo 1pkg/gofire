@@ -10,11 +10,11 @@ import (
 )
 
 func init() {
-	generators.Register(generators.DriverNameGofire, internal.Annotated(new(driver)))
+	generators.Register(generators.DriverNameGofire, internal.Cached(internal.Annotated(new(driver))))
 }
 
 type driver struct {
-	internal.BaseDriver
+	internal.Driver
 	bytes.Buffer
 	alternatives map[string]string
 }
@@ -32,7 +32,7 @@ func (d *driver) Reset() (err error) {
 		}
 	}()
 	// reset the buffer and append cli os.Args parse code.
-	_ = d.BaseDriver.Reset()
+	_ = d.Driver.Reset()
 	d.Buffer.Reset()
 	d.alternatives = make(map[string]string)
 	d.appendf(
@@ -87,12 +87,12 @@ func (d driver) Imports() []string {
 }
 
 func (d *driver) VisitArgument(a gofire.Argument) error {
-	_ = d.BaseDriver.VisitArgument(a)
+	_ = d.Driver.VisitArgument(a)
 	return d.visit(*d.Last(), nil)
 }
 
 func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
-	_ = d.BaseDriver.VisitFlag(f, g)
+	_ = d.Driver.VisitFlag(f, g)
 	v := fmt.Sprintf("%q", f.Default)
 	return d.visit(*d.Last(), &v)
 }

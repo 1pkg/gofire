@@ -13,7 +13,7 @@ import (
 )
 
 type driver struct {
-	internal.BaseDriver
+	internal.Driver
 	output   func(gofire.Command) (string, error)
 	reset    func() error
 	template func() string
@@ -31,7 +31,7 @@ func (d driver) Template() string {
 	if d.template != nil {
 		return d.template()
 	}
-	return d.BaseDriver.Template()
+	return d.Driver.Template()
 }
 
 type writer func(p []byte) (int, error)

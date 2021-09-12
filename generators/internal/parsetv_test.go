@@ -306,10 +306,9 @@ func TestParseTypeValue(t *testing.T) {
 			err: errors.New(`invalid value "[]" can't be parsed as a slice`),
 		},
 	}
-	d := BaseDriver{}
 	for tname, tcase := range table {
 		t.Run(tname, func(t *testing.T) {
-			out, err := d.ParseTypeValue(tcase.typ, tcase.val)
+			out, err := ParseTypeValue(tcase.typ, tcase.val)
 			if fmt.Sprintf("%v", tcase.err) != fmt.Sprintf("%v", err) {
 				t.Fatalf("expected error message %q but got %q", tcase.err, err)
 			}

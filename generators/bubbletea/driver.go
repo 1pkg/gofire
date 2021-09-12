@@ -12,11 +12,11 @@ import (
 )
 
 func init() {
-	generators.Register(generators.DriverNameBubbleTea, internal.Annotated(new(driver)))
+	generators.Register(generators.DriverNameBubbleTea, internal.Cached(internal.Annotated(new(driver))))
 }
 
 type driver struct {
-	internal.BaseDriver
+	internal.Driver
 	postParse bytes.Buffer
 	inputList []string
 }
@@ -63,7 +63,7 @@ func (d driver) Output(cmd gofire.Command) (string, error) {
 }
 
 func (d *driver) Reset() error {
-	_ = d.BaseDriver.Reset()
+	_ = d.Driver.Reset()
 	d.postParse.Reset()
 	d.inputList = nil
 	return nil
@@ -165,7 +165,7 @@ func (d driver) Template() string {
 }
 
 func (d *driver) VisitArgument(a gofire.Argument) error {
-	_ = d.BaseDriver.VisitArgument(a)
+	_ = d.Driver.VisitArgument(a)
 	p := d.Last()
 	tp, ok := a.Type.(gofire.TPrimitive)
 	if !ok {

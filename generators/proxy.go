@@ -14,7 +14,6 @@ type proxy struct {
 }
 
 func proxify(driver Driver, cmd gofire.Command) (interface{}, error) {
-	driver = &cached{Driver: driver}
 	if _, err := driver.Output(cmd); err != nil {
 		return nil, err
 	}
@@ -133,29 +132,4 @@ func (p proxy) Call() string {
 		return fmt.Sprintf("%s = %s", strings.Join(rnames, ", "), call)
 	}
 	return call
-}
-
-type cached struct {
-	Driver
-	cache string
-}
-
-func (d *cached) Output(cmd gofire.Command) (string, error) {
-	if d.cache != "" {
-		return d.cache, nil
-	}
-	out, err := d.Driver.Output(cmd)
-	if err != nil {
-		return "", err
-	}
-	d.cache = out
-	return out, nil
-}
-
-func (d *cached) Reset() error {
-	if err := d.Driver.Reset(); err != nil {
-		return err
-	}
-	d.cache = ""
-	return nil
 }
