@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/1pkg/gofire/generators"
-	"github.com/1pkg/gofire/utils"
+	"github.com/1pkg/gofire/generators/internal"
 )
 
 func TestFlagDriver(t *testing.T) {
@@ -31,7 +31,7 @@ func TestFlagDriver(t *testing.T) {
 	for tname, tcase := range table {
 		t.Run(tname, func(t *testing.T) {
 			fs := os.DirFS(filepath.Join("tcases", tcase.dir))
-			out, err := utils.Execute(context.TODO(), generators.DriverNameFlag, fs, tcase.pckg, tcase.function, tcase.params...)
+			out, err := internal.Execute(context.TODO(), generators.DriverNameFlag, fs, tcase.pckg, tcase.function, tcase.params...)
 			if fmt.Sprintf("%v", tcase.err) != fmt.Sprintf("%v", err) {
 				t.Fatalf("expected error message %q but got %q", tcase.err, err)
 			}

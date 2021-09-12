@@ -1,4 +1,4 @@
-package generators
+package generators_test
 
 import (
 	"bytes"
@@ -8,10 +8,12 @@ import (
 	"testing"
 
 	"github.com/1pkg/gofire"
+	"github.com/1pkg/gofire/generators"
+	"github.com/1pkg/gofire/generators/internal"
 )
 
 type driver struct {
-	BaseDriver
+	internal.BaseDriver
 	output   func(gofire.Command) (string, error)
 	reset    func() error
 	template func() string
@@ -45,11 +47,11 @@ func TestGeneratorRegister(t *testing.T) {
 				t.Fatalf("register should panic on nil driver with message %q", err)
 			}
 		}(t)
-		Register(DriverName("test_register"), nil)
+		generators.Register(generators.DriverName("test_register"), nil)
 	})
 	t.Run("should not panic on valid driver", func(t *testing.T) {
 		d := &driver{}
-		Register(DriverName("test_register"), d)
+		generators.Register(generators.DriverName("test_register"), d)
 	})
 	t.Run("should panic on duplicated driver", func(t *testing.T) {
 		d := &driver{}
@@ -58,15 +60,15 @@ func TestGeneratorRegister(t *testing.T) {
 				t.Fatalf("register should panic on duplicated driver with message %q", err)
 			}
 		}(t)
-		Register(DriverName("test_register"), d)
+		generators.Register(generators.DriverName("test_register"), d)
 	})
 }
 
 func TestGeneratorGenerate(t *testing.T) {
 	d := &driver{}
-	Register(DriverName("test_generate"), d)
+	generators.Register(generators.DriverName("test_generate"), internal.Annotated(d))
 	t.Run("should fail on unregistered driver", func(t *testing.T) {
-		err := Generate(context.TODO(), DriverName("test_generate_"), gofire.Command{}, nil)
+		err := generators.Generate(context.TODO(), generators.DriverName("test_generate_"), gofire.Command{}, nil)
 		if fmt.Sprintf("%v", err) != `unknown driver "test_generate_" (forgotten import?)` {
 			t.Fatalf("generate should fail on unregistered driver with message %q", err)
 		}
@@ -75,7 +77,7 @@ func TestGeneratorGenerate(t *testing.T) {
 		d.reset = func() error {
 			return errors.New("test_reset")
 		}
-		err := Generate(context.TODO(), DriverName("test_generate"), gofire.Command{}, nil)
+		err := generators.Generate(context.TODO(), generators.DriverName("test_generate"), gofire.Command{}, nil)
 		if fmt.Sprintf("%v", err) != "test_reset" {
 			t.Fatalf("generate should fail on driver reset error with message %q", err)
 		}
@@ -87,7 +89,7 @@ func TestGeneratorGenerate(t *testing.T) {
 		d.output = func(gofire.Command) (string, error) {
 			return "", errors.New("test_output")
 		}
-		err := Generate(context.TODO(), DriverName("test_generate"), gofire.Command{}, nil)
+		err := generators.Generate(context.TODO(), generators.DriverName("test_generate"), gofire.Command{}, nil)
 		if fmt.Sprintf("%v", err) != "test_output" {
 			t.Fatalf("generate should fail on driver output error with message %q", err)
 		}
@@ -102,7 +104,7 @@ func TestGeneratorGenerate(t *testing.T) {
 		d.template = func() string {
 			return "{{"
 		}
-		err := Generate(context.TODO(), DriverName("test_generate"), gofire.Command{}, nil)
+		err := generators.Generate(context.TODO(), generators.DriverName("test_generate"), gofire.Command{}, nil)
 		if fmt.Sprintf("%v", err) != `template: gen:4: unexpected "{" in command` {
 			t.Fatalf("generate should fail on driver broken template error with message %q", err)
 		}
@@ -117,7 +119,7 @@ func TestGeneratorGenerate(t *testing.T) {
 		d.template = func() string {
 			return "{{.Error}}"
 		}
-		err := Generate(context.TODO(), DriverName("test_generate"), gofire.Command{}, nil)
+		err := generators.Generate(context.TODO(), generators.DriverName("test_generate"), gofire.Command{}, nil)
 		if fmt.Sprintf("%v", err) != `template: gen:3:3: executing "gen" at <.Error>: can't evaluate field Error in type generators.proxy` {
 			t.Fatalf("generate should fail on driver template expanding error with message %q", err)
 		}
@@ -132,7 +134,7 @@ func TestGeneratorGenerate(t *testing.T) {
 		d.template = func() string {
 			return "func {{.Import}}"
 		}
-		err := Generate(context.TODO(), DriverName("test_generate"), gofire.Command{}, nil)
+		err := generators.Generate(context.TODO(), generators.DriverName("test_generate"), gofire.Command{}, nil)
 		if fmt.Sprintf("%v", err) != "2:2: expected 'package', found 'func'" {
 			t.Fatalf("generate should fail on driver code formating error with message %q", err)
 		}
@@ -149,7 +151,7 @@ func TestGeneratorGenerate(t *testing.T) {
 			Package:  "test_package",
 			Function: "test_function",
 		}
-		err := Generate(context.TODO(), DriverName("test_generate"), cmd, writer(func(p []byte) (int, error) {
+		err := generators.Generate(context.TODO(), generators.DriverName("test_generate"), cmd, writer(func(p []byte) (int, error) {
 			return 0, errors.New("test_write")
 		}))
 		if fmt.Sprintf("%v", err) != "test_write" {
@@ -179,7 +181,7 @@ func TestGeneratorGenerate(t *testing.T) {
 				gofire.Argument{Type: gofire.TPrimitive{TKind: gofire.Int}, Index: 1, Ellipsis: true},
 			},
 		}
-		err := Generate(context.TODO(), DriverName("test_generate"), cmd, &buf)
+		err := generators.Generate(context.TODO(), generators.DriverName("test_generate"), cmd, &buf)
 		if fmt.Sprintf("%v", err) != "<nil>" {
 			t.Fatalf("generate should not fail on valid preset %q", err)
 		}

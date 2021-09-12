@@ -6,14 +6,15 @@ import (
 
 	"github.com/1pkg/gofire"
 	"github.com/1pkg/gofire/generators"
+	"github.com/1pkg/gofire/generators/internal"
 )
 
 func init() {
-	generators.Register(generators.DriverNameGofire, new(driver))
+	generators.Register(generators.DriverNameGofire, internal.Annotated(new(driver)))
 }
 
 type driver struct {
-	generators.BaseDriver
+	internal.BaseDriver
 	bytes.Buffer
 	alternatives map[string]string
 }
