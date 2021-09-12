@@ -202,7 +202,7 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive, ellips
 			if _, err := fmt.Fprintf(&d.postParse,
 				`
 					for i := %d; i < pflag.NArg(); i++ {
-						%s =  append(%s, pflag.Arg(i))
+						%s = append(%s, pflag.Arg(i))
 					}
 				`,
 				index,

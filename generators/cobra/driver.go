@@ -232,7 +232,7 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive, ellips
 			if _, err := fmt.Fprintf(&d.postParse,
 				`
 					for i := %d; i < cli.Flags().NArg(); i++ {
-						%s =  append(%s, cli.Flags().Arg(i))
+						%s = append(%s, cli.Flags().Arg(i))
 					}
 				`,
 				index,

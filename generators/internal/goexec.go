@@ -3,6 +3,7 @@ package internal
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io/fs"
 	"io/ioutil"
 	"os"
@@ -14,7 +15,7 @@ import (
 	"github.com/1pkg/gofire/parsers"
 )
 
-func Execute(ctx context.Context, name generators.DriverName, dir fs.FS, pckg, function string, params ...string) (string, error) {
+func GoExecute(ctx context.Context, name generators.DriverName, dir fs.FS, pckg, function string, gocmd string, params ...string) (string, error) {
 	cmd, err := parsers.Parse(ctx, dir, pckg, function)
 	if err != nil {
 		return "", err
@@ -56,7 +57,7 @@ func Execute(ctx context.Context, name generators.DriverName, dir fs.FS, pckg, f
 	if _, err := f.Write(b.Bytes()); err != nil {
 		return "", err
 	}
-	exec := exec.CommandContext(ctx, "sh", "-c", "GO111MODULE=off go run . "+strings.Join(params, " "))
+	exec := exec.CommandContext(ctx, "sh", "-c", fmt.Sprintf("GO111MODULE=off go %s . %s", gocmd, strings.Join(params, " ")))
 	exec.Dir = d
 	exec.Env = os.Environ()
 	out, err := exec.CombinedOutput()

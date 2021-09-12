@@ -31,7 +31,7 @@ func (d annotation) Template() string {
 					log.Fatal(err)
 				}
 				{{ if ne .Result "" }}
-					log.Printf({{.Result}})
+					log.Print({{.Result}})
 				{{ end }}
 			}
 		{{ end }}

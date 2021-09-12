@@ -212,7 +212,7 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive, ellips
 			if _, err := fmt.Fprintf(&d.postParse,
 				`
 					for i := %d; i < flag.NArg(); i++ {
-						%s =  append(%s, flag.Arg(i))
+						%s = append(%s, flag.Arg(i))
 					}
 				`,
 				index,
@@ -420,12 +420,12 @@ func (d *driver) flag(name string, t gofire.TPrimitive, ptr bool, val string, do
 			&d.postParse,
 			`
 				{
-					const min, max = %d, %d
+					const min, max = %d, int64(%d)
 					if %s_ < min || %s_ > max {
 						return fmt.Errorf("flag %s overflow error: value %%d is out of the range [%%d,  %%d]", %s_, min, max)
 					}
 					v := %s(%s_)
-					%s =  %sv
+					%s = %sv
 				}
 			`,
 			k.Min(),
@@ -470,7 +470,7 @@ func (d *driver) flag(name string, t gofire.TPrimitive, ptr bool, val string, do
 			&d.postParse,
 			`
 				{
-					const min, max = %d, %d
+					const min, max = %d, uint64(%d)
 					if %s_ < min || %s_ > max {
 						return fmt.Errorf("flag %s overflow error: value %%d is out of the range [%%d,  %%d]", %s_, min, max)
 					}
