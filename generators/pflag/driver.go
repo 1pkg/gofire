@@ -41,15 +41,22 @@ func (d driver) Output(cmd gofire.Command) (string, error) {
 	}
 	sort.Strings(d.usageList)
 	sort.Strings(d.printList)
-	u := strings.Join(d.usageList, "\n")
-	p := strings.Join(d.printList, "\n")
+	u := strings.Join(d.usageList, " ")
+	p := strings.Join(d.printList, " ")
 	if _, err := fmt.Fprintf(
 		&buf,
 		`
 			pflag.Usage = func() {
-				_, _ = fmt.Fprintln(pflag.CommandLine.Output(), %q)
-				_, _ = fmt.Fprintln(pflag.CommandLine.Output(), %q)
-				_, _ = fmt.Fprintln(pflag.CommandLine.Output(), %q)
+				doc, usage, list := %q, %q, %q
+				if doc != "" {
+					_, _ = fmt.Fprintln(flag.CommandLine.Output(), doc)
+				}
+				if usage != "" {
+					_, _ = fmt.Fprintln(flag.CommandLine.Output(), usage)
+				}
+				if list != "" {
+					_, _ = fmt.Fprintln(flag.CommandLine.Output(), list)
+				}
 			}
 		`,
 		cmd.Doc,
@@ -88,9 +95,6 @@ func (d *driver) VisitArgument(a gofire.Argument) error {
 	_ = d.Driver.VisitArgument(a)
 	p := d.Last()
 	typ := a.Type
-	if a.Ellipsis {
-		typ = a.Type.(gofire.TSlice).ETyp
-	}
 	tp, ok := typ.(gofire.TPrimitive)
 	if !ok {
 		return fmt.Errorf(
@@ -693,22 +697,24 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 		); err != nil {
 			return err
 		}
+		return nil
 	}
-	if !hidden {
-		var pdeprecated string
-		if deprecated {
-			pdeprecated = "(DEPRECATED)"
-		}
-		u := fmt.Sprintf(`--%s=""`, name)
-		var pshort string
-		if short != "" {
-			u += " " + fmt.Sprintf(`-%s=""`, short)
-		}
-		d.usageList = append(d.usageList, u)
-		d.printList = append(
-			d.printList,
-			fmt.Sprintf("--%s %s %s %s (default %q) %s", name, pshort, t.Type(), doc, val, pdeprecated),
-		)
+	if val == "" {
+		val = `""`
 	}
+	var pdeprecated string
+	if deprecated {
+		pdeprecated = "(DEPRECATED)"
+	}
+	u := fmt.Sprintf(`--%s=%v`, name, val)
+	var pshort string
+	if short != "" {
+		u += " " + fmt.Sprintf(`-%s=%v`, short, val)
+	}
+	d.usageList = append(d.usageList, u)
+	d.printList = append(
+		d.printList,
+		fmt.Sprintf("--%s -%s %s %s (default %v) %s", name, pshort, t.Type(), doc, val, pdeprecated),
+	)
 	return nil
 }
