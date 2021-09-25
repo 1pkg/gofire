@@ -29,7 +29,7 @@ func (d driver) Output(cmd gofire.Command) (string, error) {
 		`
 			defer func() {
 				if err != nil {
-					flag.PrintDefaults()
+					flag.Usage()
 				}
 			}()
 		`,

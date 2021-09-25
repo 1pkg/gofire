@@ -29,7 +29,7 @@ func (d driver) Output(cmd gofire.Command) (string, error) {
 		`
 			defer func() {
 				if err != nil {
-					pflag.PrintDefaults()
+					pflag.Usage()
 				}
 			}()
 		`,
@@ -98,7 +98,7 @@ func (d *driver) VisitArgument(a gofire.Argument) error {
 	tp, ok := typ.(gofire.TPrimitive)
 	if !ok {
 		return fmt.Errorf(
-			"driver %s: non primitive or ellipsis argument types are not supported, got an argument %s %s",
+			"driver %s: non primitive argument types are not supported, got an argument %s %s",
 			generators.DriverNamePFlag,
 			p.Name,
 			typ.Type(),
@@ -638,7 +638,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 		if _, err := fmt.Fprintf(&d.preParse,
 			`
 				var %s_ string
-				pflag.StringVar(&%s_, %q, %q, %q, %q)
+				pflag.StringVarP(&%s_, %q, %q, %q, %q)
 			`,
 			name,
 			name,
@@ -671,7 +671,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 	if deprecated {
 		if _, err := fmt.Fprintf(&d.preParse,
 			`
-				pflag.MarkDeprecated(%q, "deprecated: %s")
+				pflag.CommandLine.MarkDeprecated(%q, "deprecated: %s")
 			`,
 			name,
 			doc,
@@ -680,7 +680,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 		}
 		if _, err := fmt.Fprintf(&d.preParse,
 			`
-				pflag.MarkShorthandDeprecated(%q, "deprecated: %s")
+				pflag.CommandLine.MarkShorthandDeprecated(%q, "deprecated: %s")
 			`,
 			short,
 			doc,
@@ -691,7 +691,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 	if hidden {
 		if _, err := fmt.Fprintf(&d.preParse,
 			`
-				pflag.MarkHidden(%q)
+				pflag.CommandLine.MarkHidden(%q)
 			`,
 			name,
 		); err != nil {
@@ -710,11 +710,12 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 	var pshort string
 	if short != "" {
 		u += " " + fmt.Sprintf(`-%s=%v`, short, val)
+		pshort = fmt.Sprintf("-%s", short)
 	}
 	d.usageList = append(d.usageList, u)
 	d.printList = append(
 		d.printList,
-		fmt.Sprintf("--%s -%s %s %s (default %v) %s", name, pshort, t.Type(), doc, val, pdeprecated),
+		fmt.Sprintf("--%s %s %s %s (default %v) %s", name, pshort, t.Type(), doc, val, pdeprecated),
 	)
 	return nil
 }

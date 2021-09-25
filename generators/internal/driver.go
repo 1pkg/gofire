@@ -89,7 +89,7 @@ func (d *Driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 	doc := fmt.Sprintf("%s %s", gdoc, f.Doc)
 	var alt string
 	if f.Short != "" {
-		alt = fmt.Sprintf("%s%s", gname, f.Short)
+		alt = f.Short
 	}
 	var ref *generators.Reference
 	if g != nil {
