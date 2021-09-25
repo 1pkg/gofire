@@ -41,15 +41,22 @@ func (d driver) Output(cmd gofire.Command) (string, error) {
 	}
 	sort.Strings(d.usageList)
 	sort.Strings(d.printList)
-	u := strings.Join(d.usageList, "\n")
-	p := strings.Join(d.printList, "\n")
+	u := strings.Join(d.usageList, " ")
+	p := strings.Join(d.printList, " ")
 	if _, err := fmt.Fprintf(
 		&buf,
 		`
 			flag.Usage = func() {
-				_, _ = fmt.Fprintln(flag.CommandLine.Output(), %q)
-				_, _ = fmt.Fprintln(flag.CommandLine.Output(), %q)
-				_, _ = fmt.Fprintln(flag.CommandLine.Output(), %q)
+				doc, usage, list := %q, %q, %q
+				if doc != "" {
+					_, _ = fmt.Fprintln(flag.CommandLine.Output(), doc)
+				}
+				if usage != "" {
+					_, _ = fmt.Fprintln(flag.CommandLine.Output(), usage)
+				}
+				if list != "" {
+					_, _ = fmt.Fprintln(flag.CommandLine.Output(), list)
+				}
 			}
 		`,
 		cmd.Doc,
@@ -88,9 +95,6 @@ func (d *driver) VisitArgument(a gofire.Argument) error {
 	_ = d.Driver.VisitArgument(a)
 	p := d.Last()
 	typ := a.Type
-	if a.Ellipsis {
-		typ = a.Type.(gofire.TSlice).ETyp
-	}
 	tp, ok := typ.(gofire.TPrimitive)
 	if !ok {
 		return fmt.Errorf(
@@ -574,7 +578,10 @@ func (d *driver) flag(name string, t gofire.TPrimitive, ptr bool, val string, do
 			name,
 		)
 	}
-	d.usageList = append(d.usageList, fmt.Sprintf(`-%s=""`, name))
-	d.printList = append(d.printList, fmt.Sprintf("-%s %s %s (default %q)", name, t.Type(), doc, val))
+	if val == "" {
+		val = `""`
+	}
+	d.usageList = append(d.usageList, fmt.Sprintf(`-%s=%v`, name, val))
+	d.printList = append(d.printList, fmt.Sprintf("-%s %s %s (default %v)", name, t.Type(), doc, val))
 	return nil
 }

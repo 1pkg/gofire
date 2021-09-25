@@ -50,7 +50,7 @@ func GoExecute(ctx context.Context, name generators.DriverName, dir fs.FS, pckg,
 			return "", err
 		}
 	}
-	f, err := os.Create(filepath.Join(d, "main.go"))
+	f, err := os.Create(filepath.Join(d, fmt.Sprintf("%s.go", name)))
 	if err != nil {
 		return "", err
 	}

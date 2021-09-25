@@ -63,15 +63,6 @@ func (p proxy) Return() string {
 	return strings.Join(ret, ", ")
 }
 
-func (p proxy) Result() string {
-	// collect all return call signature param namep.
-	rnames := make([]string, 0, len(p.command.Results))
-	for i := range p.command.Results {
-		rnames = append(rnames, fmt.Sprintf("o%d", i))
-	}
-	return strings.Join(rnames, ", ")
-}
-
 func (p proxy) Parameters() string {
 	parameters := make([]string, 0, len(p.driver.Parameters()))
 	for _, p := range p.driver.Parameters() {
@@ -91,7 +82,7 @@ func (p proxy) Vars() string {
 		vars = append(vars, fmt.Sprintf("var %s %s", p.Name, p.Type.Type()))
 		// for each struct group generate separate var too.
 		if g := p.Ref.Group(); g != "" && !groups[g] {
-			vars = append(vars, fmt.Sprintf("var g%s %s", g, g))
+			vars = append(vars, fmt.Sprintf("var g%s %s", g, p.Ref.Type()))
 			groups[g] = true
 		}
 	}
@@ -108,7 +99,7 @@ func (p proxy) Groups() string {
 	var gassigns []string
 	for _, p := range p.driver.Parameters() {
 		if p.Ref != nil {
-			gassigns = append(gassigns, fmt.Sprintf("g%s=%s", *p.Ref, p.Name))
+			gassigns = append(gassigns, fmt.Sprintf("g%s=%s", p.Ref.Untyped(), p.Name))
 		}
 	}
 	return strings.Join(gassigns, "\n")
@@ -116,11 +107,28 @@ func (p proxy) Groups() string {
 
 func (p proxy) Call() string {
 	// define call expression context param aware template.
+	parameters := make([]string, 0, len(p.driver.Parameters()))
+	groups := make(map[string]bool)
+	for _, p := range p.driver.Parameters() {
+		if p.Ref != nil {
+			if groups[p.Ref.Group()] {
+				continue
+			}
+			parameters = append(parameters, fmt.Sprintf("g%s", p.Ref.Group()))
+			groups[p.Ref.Group()] = true
+			continue
+		}
+		name := p.Name
+		if p.Ellipsis {
+			name = fmt.Sprintf("%s...", name)
+		}
+		parameters = append(parameters, name)
+	}
 	var call string
 	if p.command.Context {
-		call = fmt.Sprintf("%s(ctx, %s)", p.command.Function, p.Parameters())
+		call = fmt.Sprintf("%s(ctx, %s)", p.command.Function, strings.Join(parameters, ", "))
 	} else {
-		call = fmt.Sprintf("%s(%s)", p.command.Function, p.Parameters())
+		call = fmt.Sprintf("%s(%s)", p.command.Function, strings.Join(parameters, ", "))
 	}
 	// collect all return call signature param namep.
 	rnames := make([]string, 0, len(p.command.Results))

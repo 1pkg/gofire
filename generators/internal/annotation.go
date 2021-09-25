@@ -22,17 +22,11 @@ func (d annotation) Template() string {
 			func main() {
 				ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 				defer stop()
-				{{ if eq .Result "" }}
-					err := {{.Function}}(ctx)
-				{{ else }}
-					{{.Result}}, err := {{.Function}}(ctx)
-				{{ end }}
-				if err != nil {
-					log.Fatal(err)
-				}
-				{{ if ne .Result "" }}
-					log.Print({{.Result}})
-				{{ end }}
+				func({{.Return}}){
+					if err != nil {
+						log.Fatal(err)
+					}
+				}({{.Function}}(ctx))
 			}
 		{{ end }}
 	`

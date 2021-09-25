@@ -93,7 +93,7 @@ func (d *Driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 	}
 	var ref *generators.Reference
 	if g != nil {
-		ref = generators.NewReference(gname, f.Full)
+		ref = generators.NewReference(g.Type.Type(), gname, f.Full)
 	}
 	d.params = append(d.params, generators.Parameter{
 		Name: name,

@@ -19,23 +19,37 @@ const (
 
 type Reference string
 
-func NewReference(g, f string) *Reference {
-	ref := Reference(fmt.Sprintf("%s.%s", g, f))
+func NewReference(typ, g, f string) *Reference {
+	ref := Reference(fmt.Sprintf("%s.%s.%s", typ, g, f))
 	return &ref
 }
 
-func (g *Reference) Group() string {
+func (g *Reference) Type() string {
 	if g == nil {
 		return ""
 	}
 	return strings.Split(string(*g), ".")[0]
 }
 
-func (g *Reference) Field() string {
+func (g *Reference) Group() string {
 	if g == nil {
 		return ""
 	}
 	return strings.Split(string(*g), ".")[1]
+}
+
+func (g *Reference) Field() string {
+	if g == nil {
+		return ""
+	}
+	return strings.Split(string(*g), ".")[2]
+}
+
+func (g *Reference) Untyped() string {
+	if g == nil {
+		return ""
+	}
+	return strings.Join(strings.Split(string(*g), ".")[1:], ".")
 }
 
 type Parameter struct {
