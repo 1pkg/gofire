@@ -60,7 +60,7 @@ func (d driver) Output(cmd gofire.Command) (string, error) {
 			}
 		`,
 		cmd.Doc,
-		cmd.Function+" "+u,
+		fmt.Sprintf("%s %s [-help -h]", cmd.Function, u),
 		p,
 	); err != nil {
 		return "", err

@@ -30,6 +30,16 @@ func TestCobraDriver(t *testing.T) {
 			params:   []string{"--a=test", "--b", "100", "--c", "10", "--d=true", "--e", "10.125", "test1", "101", "11", "false", "10.5"},
 			out:      "a:test b:100 c:10 d:true e:10.125 a1:test1 b1:101 c1:11 d1:false e1:10.500\n",
 		},
+		"echo primitive params types should produce expected output on help flag": {
+			dir:      "echo_primitive_params",
+			pckg:     "main",
+			function: "echo",
+			params:   []string{"--help"},
+			out: `echo: echo documentation string.
+Usage: echo --a="" --b=0 --c=0 --d=false --e=0.0 arg0 arg1 arg2 arg3 arg4
+Flags: --a string --b int --c uint --d --e float32 -h, --help help for echo
+`,
+		},
 		"echo primitive params types should produce expected error on invalid flags": {
 			dir:      "echo_primitive_params",
 			pckg:     "main",

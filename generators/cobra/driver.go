@@ -20,7 +20,6 @@ type driver struct {
 	preParse   bytes.Buffer
 	postParse  bytes.Buffer
 	usageList  []string
-	printList  []string
 	nargs      uint
 	shortNames map[string]bool
 }
@@ -47,16 +46,11 @@ func (d driver) Output(cmd gofire.Command) (string, error) {
 	}
 	digest := cmd.Function
 	if len(cmd.Doc) > len(digest) {
-		digest = strings.Split(cmd.Doc, "\n")[0]
+		digest += ": " + strings.Split(cmd.Doc, "\n")[0]
 	}
 	sort.Strings(d.usageList)
-	sort.Strings(d.printList)
 	u := strings.Join(d.usageList, " ")
-	p := strings.Join(d.printList, " ")
 	if _, err := fmt.Fprintf(&buf, "cli.Short = %q;", digest); err != nil {
-		return "", err
-	}
-	if _, err := fmt.Fprintf(&buf, "cli.Long = %q;", fmt.Sprintf("%s\n%s\n%s", cmd.Doc, cmd.Function+" "+u, p)); err != nil {
 		return "", err
 	}
 	if _, err := fmt.Fprintf(&buf, "cli.Use = %q;", cmd.Function+" "+u); err != nil {
@@ -73,7 +67,6 @@ func (d *driver) Reset() error {
 	d.preParse.Reset()
 	d.postParse.Reset()
 	d.usageList = nil
-	d.printList = nil
 	d.shortNames = make(map[string]bool)
 	d.nargs = 0
 	return nil
@@ -376,12 +369,7 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive, ellips
 		}
 	}
 	d.nargs++
-	symb := "arg"
-	if ellipsis {
-		symb += "..."
-	}
 	d.usageList = append(d.usageList, fmt.Sprintf("arg%d", index))
-	d.printList = append(d.printList, fmt.Sprintf("%s %d %s", symb, index, t.Type()))
 	return nil
 }
 
@@ -744,20 +732,10 @@ func (d *driver) flag(name, full, short string, t gofire.Typ, ptr bool, val stri
 	if val == "" {
 		val = `""`
 	}
-	var pdeprecated string
-	if deprecated {
-		pdeprecated = "(DEPRECATED)"
-	}
 	u := fmt.Sprintf(`--%s=%v`, full, val)
-	var pshort string
 	if short != "" {
 		u += " " + fmt.Sprintf(`-%s=%v`, short, val)
-		pshort = fmt.Sprintf("-%s", short)
 	}
 	d.usageList = append(d.usageList, u)
-	d.printList = append(
-		d.printList,
-		fmt.Sprintf("--%s %s %s %s (default %v) %s", full, pshort, t.Type(), doc, val, pdeprecated),
-	)
 	return nil
 }
