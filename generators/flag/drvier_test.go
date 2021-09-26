@@ -70,18 +70,18 @@ exit status 2
 			dir:      "echo_group_params",
 			pckg:     "main",
 			function: "echo",
-			params:   []string{"-g1a=100"},
+			params:   []string{"-g1.a=100"},
 			out:      "1:100 2:10\n",
 		},
 		"echo group params types should produce expected error on invalid params": {
 			dir:      "echo_group_params",
 			pckg:     "main",
 			function: "echo",
-			params:   []string{"-g1a=group"},
+			params:   []string{"-g1.a=group"},
 			err:      errors.New("exit status 1"),
-			out: `invalid value "group" for flag -g1a: parse error
-echo -g1a=10 -g1b=10 -g2a=10 -g2b=10
--g1a int some fields doc. (default 10) -g1b int some fields doc. (default 10) -g2a int some fields doc. (default 10) -g2b int some fields doc. (default 10)
+			out: `invalid value "group" for flag -g1.a: parse error
+echo -g1.a=10 -g1.b=10 -g2.a=10 -g2.b=10
+-g1.a int some fields doc. (default 10) -g1.b int some fields doc. (default 10) -g2.a int some fields doc. (default 10) -g2.b int some fields doc. (default 10)
 exit status 2
 `,
 		},

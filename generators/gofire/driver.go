@@ -107,8 +107,8 @@ func (d *driver) visit(p generators.Parameter, val *string) (err error) {
 	}()
 	key := fmt.Sprintf("%q", p.Name)
 	// in case alternative name is present add it to alt name lookups.
-	if p.Alt != "" {
-		altKey := fmt.Sprintf("%q", p.Alt)
+	if p.Short != "" {
+		altKey := fmt.Sprintf("%q", p.Short)
 		d.alternatives[key] = altKey
 	}
 	d.typ(p.Name, key, p.Type, val)

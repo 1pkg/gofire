@@ -54,7 +54,8 @@ func (g *Reference) Untyped() string {
 
 type Parameter struct {
 	Name     string
-	Alt      string
+	Full     string
+	Short    string
 	Type     gofire.Typ
 	Ellipsis bool
 	Doc      string

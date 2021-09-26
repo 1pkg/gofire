@@ -78,8 +78,8 @@ exit status 2
 			dir:      "echo_group_params",
 			pckg:     "main",
 			function: "echo",
-			params:   []string{"--g1a=100"},
-			out: `Flag --g1a has been deprecated, deprecated: some fields doc.
+			params:   []string{"--g1.a=100"},
+			out: `Flag --g1.a has been deprecated, deprecated: some fields doc.
 1:100 2:10
 `,
 		},
@@ -87,12 +87,12 @@ exit status 2
 			dir:      "echo_group_params",
 			pckg:     "main",
 			function: "echo",
-			params:   []string{"--g1a=group"},
+			params:   []string{"--g1.a=group"},
 			err:      errors.New("exit status 1"),
-			out: `invalid argument "group" for "--g1a" flag: strconv.ParseInt: parsing "group": invalid syntax
-echo --g1a=10 --g1b=10 --g2a=10 --g2b=10
---g1a int some fields doc. (default 10) (DEPRECATED) --g1b int some fields doc. (default 10) (DEPRECATED) --g2a int some fields doc. (default 10) (DEPRECATED) --g2b int some fields doc. (default 10) (DEPRECATED)
-invalid argument "group" for "--g1a" flag: strconv.ParseInt: parsing "group": invalid syntax
+			out: `invalid argument "group" for "--g1.a" flag: strconv.ParseInt: parsing "group": invalid syntax
+echo --g1.a=10 --g1.b=10 --g2.a=10 --g2.b=10
+--g1.a int some fields doc. (default 10) (DEPRECATED) --g1.b int some fields doc. (default 10) (DEPRECATED) --g2.a int some fields doc. (default 10) (DEPRECATED) --g2.b int some fields doc. (default 10) (DEPRECATED)
+invalid argument "group" for "--g1.a" flag: strconv.ParseInt: parsing "group": invalid syntax
 exit status 2
 `,
 		},
@@ -100,8 +100,8 @@ exit status 2
 			dir:      "echo_short_group_params",
 			pckg:     "main",
 			function: "echo",
-			params:   []string{"-b=test", "--g1flag1=100"},
-			out: `Flag --g1flag1 has been deprecated, deprecated: flag 1 doc.
+			params:   []string{"-b=test", "--g1.flag1=100"},
+			out: `Flag --g1.flag1 has been deprecated, deprecated: flag 1 doc.
 1:100 2:test
 `,
 		},

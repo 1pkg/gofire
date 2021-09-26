@@ -17,10 +17,11 @@ func init() {
 
 type driver struct {
 	internal.Driver
-	preParse  bytes.Buffer
-	postParse bytes.Buffer
-	usageList []string
-	printList []string
+	preParse   bytes.Buffer
+	postParse  bytes.Buffer
+	usageList  []string
+	printList  []string
+	shortNames map[string]bool
 }
 
 func (d driver) Output(cmd gofire.Command) (string, error) {
@@ -80,6 +81,7 @@ func (d *driver) Reset() error {
 	d.postParse.Reset()
 	d.usageList = nil
 	d.printList = nil
+	d.shortNames = make(map[string]bool)
 	return nil
 }
 
@@ -118,7 +120,21 @@ func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 	if ptr {
 		typ = tprt.ETyp
 	}
-	if err := d.flag(p.Name, p.Alt, typ, ptr, f.Default, f.Doc, f.Deprecated, f.Hidden); err != nil {
+	full := p.Full
+	if p.Ref != nil {
+		full = fmt.Sprintf("%s.%s", p.Ref.Group(), full)
+	}
+	switch len(p.Short) {
+	case 0:
+	case 1:
+		if d.shortNames[p.Short] {
+			return fmt.Errorf("driver %s: short flag name %q has been already registred", generators.DriverNamePFlag, p.Short)
+		}
+		d.shortNames[p.Short] = true
+	default:
+		return fmt.Errorf("driver %s: short flag name %q is not supported", generators.DriverNamePFlag, p.Short)
+	}
+	if err := d.flag(p.Name, full, p.Short, typ, ptr, f.Default, f.Doc, f.Deprecated, f.Hidden); err != nil {
 		return fmt.Errorf("driver %s: flag %w", generators.DriverNamePFlag, err)
 	}
 	return nil
@@ -343,7 +359,7 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive, ellips
 	return nil
 }
 
-func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, doc string, deprecated, hidden bool) error {
+func (d *driver) flag(name, full, short string, t gofire.Typ, ptr bool, val string, doc string, deprecated, hidden bool) error {
 	var amp string
 	if ptr {
 		amp = "&"
@@ -358,7 +374,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 			if err != nil || v == nil {
 				return fmt.Errorf(
 					"can't parse default value for a flag %s type %s: %w",
-					name,
+					full,
 					t.Type(),
 					err,
 				)
@@ -370,7 +386,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 				`,
 				name,
 				name,
-				name,
+				full,
 				short,
 				v,
 				doc,
@@ -394,7 +410,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 			if err != nil || v == nil {
 				return fmt.Errorf(
 					"can't parse default value for a flag %s type %s: %w",
-					name,
+					full,
 					t.Type(),
 					err,
 				)
@@ -408,7 +424,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 				ts.Type(),
 				strings.Title(etyp.Type()),
 				name,
-				name,
+				full,
 				short,
 				v,
 				doc,
@@ -432,7 +448,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 			if err != nil || v == nil {
 				return fmt.Errorf(
 					"can't parse default value for a flag %s type %s: %w",
-					name,
+					full,
 					t.Type(),
 					err,
 				)
@@ -446,7 +462,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 				ts.Type(),
 				strings.Title(etyp.Type()),
 				name,
-				name,
+				full,
 				short,
 				v,
 				doc,
@@ -469,7 +485,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 			return fmt.Errorf(
 				"type %s is not supported for a flag %s",
 				t.Type(),
-				name,
+				full,
 			)
 		}
 	case gofire.Bool:
@@ -477,7 +493,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 		if err != nil || v == nil {
 			return fmt.Errorf(
 				"can't parse default value for a flag %s type %s: %w",
-				name,
+				full,
 				t.Type(),
 				err,
 			)
@@ -489,7 +505,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 			`,
 			name,
 			name,
-			name,
+			full,
 			short,
 			v,
 			doc,
@@ -513,7 +529,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 		if err != nil || v == nil {
 			return fmt.Errorf(
 				"can't parse default value for a flag %s type %s: %w",
-				name,
+				full,
 				t.Type(),
 				err,
 			)
@@ -528,7 +544,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 			t.Type(),
 			strings.Title(t.Type()),
 			name,
-			name,
+			full,
 			short,
 			v,
 			doc,
@@ -552,7 +568,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 		if err != nil || v == nil {
 			return fmt.Errorf(
 				"can't parse default value for a flag %s type %s: %w",
-				name,
+				full,
 				t.Type(),
 				err,
 			)
@@ -567,7 +583,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 			t.Type(),
 			strings.Title(t.Type()),
 			name,
-			name,
+			full,
 			short,
 			v,
 			doc,
@@ -591,7 +607,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 		if err != nil || v == nil {
 			return fmt.Errorf(
 				"can't parse default value for a flag %s type %s: %w",
-				name,
+				full,
 				t.Type(),
 				err,
 			)
@@ -606,7 +622,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 			t.Type(),
 			strings.Title(t.Type()),
 			name,
-			name,
+			full,
 			short,
 			v,
 			doc,
@@ -630,7 +646,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 		if err != nil || v == nil {
 			return fmt.Errorf(
 				"can't parse default value for a flag %s type %s: %w",
-				name,
+				full,
 				t.Type(),
 				err,
 			)
@@ -642,7 +658,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 			`,
 			name,
 			name,
-			name,
+			full,
 			short,
 			v,
 			doc,
@@ -665,7 +681,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 		return fmt.Errorf(
 			"type %s is not supported for a flag %s",
 			t.Type(),
-			name,
+			full,
 		)
 	}
 	if deprecated {
@@ -673,7 +689,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 			`
 				pflag.CommandLine.MarkDeprecated(%q, "deprecated: %s")
 			`,
-			name,
+			full,
 			doc,
 		); err != nil {
 			return err
@@ -693,7 +709,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 			`
 				pflag.CommandLine.MarkHidden(%q)
 			`,
-			name,
+			full,
 		); err != nil {
 			return err
 		}
@@ -706,7 +722,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 	if deprecated {
 		pdeprecated = "(DEPRECATED)"
 	}
-	u := fmt.Sprintf(`--%s=%v`, name, val)
+	u := fmt.Sprintf(`--%s=%v`, full, val)
 	var pshort string
 	if short != "" {
 		u += " " + fmt.Sprintf(`-%s=%v`, short, val)
@@ -715,7 +731,7 @@ func (d *driver) flag(name, short string, t gofire.Typ, ptr bool, val string, do
 	d.usageList = append(d.usageList, u)
 	d.printList = append(
 		d.printList,
-		fmt.Sprintf("--%s %s %s %s (default %v) %s", name, pshort, t.Type(), doc, val, pdeprecated),
+		fmt.Sprintf("--%s %s %s %s (default %v) %s", full, pshort, t.Type(), doc, val, pdeprecated),
 	)
 	return nil
 }

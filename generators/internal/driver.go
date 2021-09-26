@@ -87,20 +87,17 @@ func (d *Driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 	}
 	name := fmt.Sprintf("%s%s", gname, f.Full)
 	doc := fmt.Sprintf("%s %s", gdoc, f.Doc)
-	var alt string
-	if f.Short != "" {
-		alt = f.Short
-	}
 	var ref *generators.Reference
 	if g != nil {
 		ref = generators.NewReference(g.Type.Type(), gname, f.Full)
 	}
 	d.params = append(d.params, generators.Parameter{
-		Name: name,
-		Alt:  alt,
-		Type: f.Type,
-		Doc:  doc,
-		Ref:  ref,
+		Name:  name,
+		Full:  f.Full,
+		Short: f.Short,
+		Type:  f.Type,
+		Doc:   doc,
+		Ref:   ref,
 	})
 	return nil
 }
