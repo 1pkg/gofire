@@ -27,6 +27,9 @@ type driver struct {
 
 func (d driver) Output(cmd gofire.Command) (string, error) {
 	var buf bytes.Buffer
+	if _, err := buf.Write(d.preParse.Bytes()); err != nil {
+		return "", err
+	}
 	if _, err := fmt.Fprintf(
 		&buf,
 		`
@@ -39,7 +42,7 @@ func (d driver) Output(cmd gofire.Command) (string, error) {
 	); err != nil {
 		return "", err
 	}
-	if _, err := fmt.Fprintf(&buf, "cmd.Args = cobra.MinimumNArgs(%d);", d.nargs); err != nil {
+	if _, err := fmt.Fprintf(&buf, "cli.Args = cobra.MinimumNArgs(%d);", d.nargs); err != nil {
 		return "", err
 	}
 	digest := cmd.Function
@@ -50,16 +53,13 @@ func (d driver) Output(cmd gofire.Command) (string, error) {
 	sort.Strings(d.printList)
 	u := strings.Join(d.usageList, " ")
 	p := strings.Join(d.printList, " ")
-	if _, err := fmt.Fprintf(&buf, "cmd.Short = %q;", digest); err != nil {
+	if _, err := fmt.Fprintf(&buf, "cli.Short = %q;", digest); err != nil {
 		return "", err
 	}
-	if _, err := fmt.Fprintf(&buf, "cmd.Long = %q;", fmt.Sprintf("%s\n%s\n%s", cmd.Doc, cmd.Function+" "+u, p)); err != nil {
+	if _, err := fmt.Fprintf(&buf, "cli.Long = %q;", fmt.Sprintf("%s\n%s\n%s", cmd.Doc, cmd.Function+" "+u, p)); err != nil {
 		return "", err
 	}
-	if _, err := fmt.Fprintf(&buf, "cmd.Use = %q;", cmd.Function+" "+u); err != nil {
-		return "", err
-	}
-	if _, err := buf.Write(d.preParse.Bytes()); err != nil {
+	if _, err := fmt.Fprintf(&buf, "cli.Use = %q;", cmd.Function+" "+u); err != nil {
 		return "", err
 	}
 	if _, err := buf.WriteString("err = cli.ExecuteContext(ctx)"); err != nil {
@@ -75,6 +75,7 @@ func (d *driver) Reset() error {
 	d.usageList = nil
 	d.printList = nil
 	d.shortNames = make(map[string]bool)
+	d.nargs = 0
 	return nil
 }
 
@@ -103,13 +104,14 @@ func (d driver) Template() string {
 				RunE: func(cmd *cobra.Command, _ []string) (err error) {
 					ctx := cmd.Context()
 					if err = parse(ctx); err != nil {
-						retrun
+						return
 					}
 					{{.Groups}}
 					{{.Call}}
 					return
 				},
 			}
+			cli.DisableFlagsInUseLine = true
 			{{.Body}}
 			return
 		}
@@ -678,7 +680,7 @@ func (d *driver) flag(name, full, short string, t gofire.Typ, ptr bool, val stri
 		if _, err := fmt.Fprintf(&d.preParse,
 			`
 				var %s_ string
-				cli.Flags().StringVar(&%s_, %q, %q, %q, %q)
+				cli.Flags().StringVarP(&%s_, %q, %q, %q, %q)
 			`,
 			name,
 			name,

@@ -1,4 +1,4 @@
-package pflag
+package cobra
 
 import (
 	"context"
@@ -6,13 +6,15 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 
 	"github.com/1pkg/gofire/generators"
 	"github.com/1pkg/gofire/generators/internal"
 )
 
-func TestPFlagDriver(t *testing.T) {
+func TestCobraDriver(t *testing.T) {
+	unify := regexp.MustCompile(`\s|\n`)
 	table := map[string]struct {
 		dir      string
 		pckg     string
@@ -34,10 +36,9 @@ func TestPFlagDriver(t *testing.T) {
 			function: "echo",
 			params:   []string{"--e", "test"},
 			err:      errors.New("exit status 1"),
-			out: `invalid argument "test" for "--e" flag: strconv.ParseFloat: parsing "test": invalid syntax
-echo documentation string.
-echo --a="" --b=0 --c=0 --d=false --e=0.0 arg0 arg1 arg2 arg3 arg4
---a string (default "") --b int (default 0) --c uint64 (default 0) --d bool (default false) --e float32 (default 0.0) arg 0 string arg 1 int arg 2 uint64 arg 3 bool arg 4 float32
+			out: `Error: invalid argument "test" for "--e" flag: strconv.ParseFloat: parsing "test": invalid syntax
+Usage: echo --a="" --b=0 --c=0 --d=false --e=0.0 arg0 arg1 arg2 arg3 arg4
+Flags: --a string --b int --c uint --d --e float32 -h, --help help for echo
 invalid argument "test" for "--e" flag: strconv.ParseFloat: parsing "test": invalid syntax
 exit status 2
 `,
@@ -48,10 +49,10 @@ exit status 2
 			function: "echo",
 			params:   []string{"--a=test", "--b", "100", "--c", "10", "--d=true", "--e", "10.125", "test1"},
 			err:      errors.New("exit status 1"),
-			out: `echo documentation string.
-echo --a="" --b=0 --c=0 --d=false --e=0.0 arg0 arg1 arg2 arg3 arg4
---a string (default "") --b int (default 0) --c uint64 (default 0) --d bool (default false) --e float32 (default 0.0) arg 0 string arg 1 int arg 2 uint64 arg 3 bool arg 4 float32
-argument 1-th is required
+			out: `Error: requires at least 5 arg(s), only received 1
+Usage: echo --a="" --b=0 --c=0 --d=false --e=0.0 arg0 arg1 arg2 arg3 arg4
+Flags: --a string --b int --c uint --d --e float32 -h, --help help for echo
+requires at least 5 arg(s), only received 1
 exit status 2
 `,
 		},
@@ -59,13 +60,13 @@ exit status 2
 			dir:      "echo_non_primitive_args",
 			pckg:     "main",
 			function: "echo",
-			err:      errors.New("driver pflag: non primitive argument types are not supported, got an argument a0 map[string]bool"),
+			err:      errors.New("driver cobra: non primitive argument types are not supported, got an argument a0 map[string]bool"),
 		},
 		"echo non primitive flags map type types should should fail on driver generation": {
 			dir:      "echo_non_primitive_flags_map",
 			pckg:     "main",
 			function: "echo",
-			err:      errors.New("driver pflag: flag type map[string]bool is not supported for a flag a"),
+			err:      errors.New("driver cobra: flag type map[string]bool is not supported for a flag a"),
 		},
 		"echo non primitive flags slice type should produce expected output on valid params": {
 			dir:      "echo_non_primitive_flags_slice",
@@ -89,9 +90,9 @@ exit status 2
 			function: "echo",
 			params:   []string{"--g1.a=group"},
 			err:      errors.New("exit status 1"),
-			out: `invalid argument "group" for "--g1.a" flag: strconv.ParseInt: parsing "group": invalid syntax
-echo --g1.a=10 --g1.b=10 --g2.a=10 --g2.b=10
---g1.a int some fields doc. (default 10) (DEPRECATED) --g1.b int some fields doc. (default 10) (DEPRECATED) --g2.a int some fields doc. (default 10) (DEPRECATED) --g2.b int some fields doc. (default 10) (DEPRECATED)
+			out: `Error: invalid argument "group" for "--g1.a" flag: strconv.ParseInt: parsing "group": invalid syntax
+Usage: echo --g1.a=10 --g1.b=10 --g2.a=10 --g2.b=10
+Flags: -h, --help help for echo
 invalid argument "group" for "--g1.a" flag: strconv.ParseInt: parsing "group": invalid syntax
 exit status 2
 `,
@@ -123,11 +124,11 @@ exit status 2
 	for tname, tcase := range table {
 		t.Run(tname, func(t *testing.T) {
 			fs := os.DirFS(filepath.Join("tcases", tcase.dir))
-			out, err := internal.GoExecute(context.TODO(), generators.DriverNamePFlag, fs, tcase.pckg, tcase.function, "run -tags=tcases", tcase.params...)
+			out, err := internal.GoExecute(context.TODO(), generators.DriverNameCobra, fs, tcase.pckg, tcase.function, "run -tags=tcases", tcase.params...)
 			if fmt.Sprintf("%v", tcase.err) != fmt.Sprintf("%v", err) {
 				t.Fatalf("expected error message %q but got %q\n%v", tcase.err, err, out)
 			}
-			if tcase.out != out {
+			if unify.ReplaceAllString(tcase.out, "") != unify.ReplaceAllString(out, "") {
 				t.Fatalf("expected output %q but got %q", tcase.out, out)
 			}
 		})
