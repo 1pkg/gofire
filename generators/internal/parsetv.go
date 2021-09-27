@@ -9,108 +9,14 @@ import (
 )
 
 func ParseTypeValue(t gofire.Typ, val string) (interface{}, error) {
-	slice := func(val string) ([]string, error) {
-		if val == "" || val == "{}" {
-			return nil, nil
-		}
-		if !strings.HasPrefix(val, "{") || !strings.HasSuffix(val, "}") {
-			return nil, fmt.Errorf("invalid value %q can't be parsed as a slice", val)
-		}
-		val = val[:len(val)-1][1:]
-		if len(strings.TrimSpace(val)) == 0 {
-			return nil, nil
-		}
-		return strings.Split(val, ","), nil
-	}
 	k := t.Kind()
 	switch k {
+	case gofire.Array:
+		return parseTypeValueRange(t.(gofire.TArray).ETyp, int(t.(gofire.TArray).Size), val)
 	case gofire.Slice:
-		ts := t.(gofire.TSlice)
-		etyp := ts.ETyp
-		ek := etyp.Kind()
-		switch etyp.Kind() {
-		case gofire.Bool:
-			pvals, err := slice(val)
-			if err != nil {
-				return nil, err
-			}
-			v := make([]bool, 0, len(pvals))
-			for _, val := range pvals {
-				b, err := strconv.ParseBool(strings.TrimSpace(val))
-				if err != nil {
-					return nil, err
-				}
-				v = append(v, b)
-			}
-			return v, nil
-		case gofire.Int, gofire.Int8, gofire.Int16, gofire.Int32, gofire.Int64:
-			pvals, err := slice(val)
-			if err != nil {
-				return nil, err
-			}
-			v := make([]int64, 0, len(pvals))
-			for _, val := range pvals {
-				i, err := strconv.ParseInt(strings.TrimSpace(val), 10, int(ek.Base()))
-				if err != nil {
-					return nil, err
-				}
-				v = append(v, i)
-			}
-			return v, nil
-		case gofire.Uint, gofire.Uint8, gofire.Uint16, gofire.Uint32, gofire.Uint64:
-			pvals, err := slice(val)
-			if err != nil {
-				return nil, err
-			}
-			v := make([]uint64, 0, len(pvals))
-			for _, val := range pvals {
-				i, err := strconv.ParseUint(strings.TrimSpace(val), 10, int(ek.Base()))
-				if err != nil {
-					return nil, err
-				}
-				v = append(v, i)
-			}
-			return v, nil
-		case gofire.Float32, gofire.Float64:
-			pvals, err := slice(val)
-			if err != nil {
-				return nil, err
-			}
-			v := make([]float64, 0, len(pvals))
-			for _, val := range pvals {
-				f, err := strconv.ParseFloat(strings.TrimSpace(val), int(ek.Base()))
-				if err != nil {
-					return nil, err
-				}
-				v = append(v, f)
-			}
-			return v, nil
-		case gofire.Complex64, gofire.Complex128:
-			pvals, err := slice(val)
-			if err != nil {
-				return nil, err
-			}
-			v := make([]complex128, 0, len(pvals))
-			for _, val := range pvals {
-				c, err := strconv.ParseComplex(strings.TrimSpace(val), int(ek.Base()))
-				if err != nil {
-					return nil, err
-				}
-				v = append(v, c)
-			}
-			return v, nil
-		case gofire.String:
-			pvals, err := slice(val)
-			if err != nil {
-				return nil, err
-			}
-			v := make([]string, 0, len(pvals))
-			for _, val := range pvals {
-				s := strings.Replace(strings.TrimSpace(val), `"`, "", 2)
-				v = append(v, s)
-			}
-			return v, nil
-		}
+		return parseTypeValueRange(t.(gofire.TSlice).ETyp, -1, val)
+	case gofire.Map:
+		return parseTypeValueMap(t.(gofire.TMap).KTyp, t.(gofire.TMap).VTyp, val)
 	case gofire.Bool:
 		if val == "" {
 			return false, nil
@@ -137,7 +43,73 @@ func ParseTypeValue(t gofire.Typ, val string) (interface{}, error) {
 		}
 		return strconv.ParseComplex(val, int(k.Base()))
 	case gofire.String:
+		if sval, err := strconv.Unquote(val); err == nil {
+			return sval, nil
+		}
 		return val, nil
 	}
 	return nil, nil
+}
+
+func parseTypeValueRange(t gofire.Typ, size int, val string) (interface{}, error) {
+	if val == "" || val == "{}" {
+		return []interface{}{}, nil
+	}
+	if !strings.HasPrefix(val, "{") || !strings.HasSuffix(val, "}") {
+		return nil, fmt.Errorf("invalid value %q can't be parsed as an array or a slice", val)
+	}
+	nval := val[:len(val)-1][1:]
+	if len(strings.TrimSpace(nval)) == 0 {
+		return []interface{}{}, nil
+	}
+	pvals := strings.Split(nval, ",")
+	if size > -1 && len(pvals) != size {
+		return nil, fmt.Errorf("invalid value %q can't be parsed as an array %d", val, size)
+	}
+	r := make([]interface{}, 0, len(pvals))
+	for _, val := range pvals {
+		v, err := ParseTypeValue(t, strings.TrimSpace(val))
+		if err != nil {
+			return nil, err
+		}
+		r = append(r, v)
+	}
+	return r, nil
+}
+
+func parseTypeValueMap(tk, tv gofire.Typ, val string) (interface{}, error) {
+	if val == "" || val == "{}" {
+		return map[interface{}]interface{}{}, nil
+	}
+	if !strings.HasPrefix(val, "{") || !strings.HasSuffix(val, "}") {
+		return nil, fmt.Errorf("invalid value %q can't be parsed as a map", val)
+	}
+	nval := val[:len(val)-1][1:]
+	if len(strings.TrimSpace(nval)) == 0 {
+		return map[interface{}]interface{}{}, nil
+	}
+	pairs := strings.Split(nval, ",")
+	pkeys := make([]string, 0, len(pairs))
+	pvals := make([]string, 0, len(pairs))
+	for _, pair := range pairs {
+		p := strings.SplitN(pair, ":", 2)
+		if len(p) != 2 {
+			return nil, fmt.Errorf("invalid value %q can't be parsed as a map", val)
+		}
+		pkeys = append(pkeys, p[0])
+		pvals = append(pvals, p[1])
+	}
+	mp := make(map[interface{}]interface{}, len(pairs))
+	for i := range pairs {
+		k, err := ParseTypeValue(tk, strings.TrimSpace(pkeys[i]))
+		if err != nil {
+			return nil, err
+		}
+		v, err := ParseTypeValue(tv, strings.TrimSpace(pvals[i]))
+		if err != nil {
+			return nil, err
+		}
+		mp[k] = v
+	}
+	return mp, nil
 }
