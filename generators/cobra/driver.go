@@ -396,13 +396,13 @@ func (d *driver) flag(name, full, short string, t gofire.Typ, ptr bool, val stri
 			if _, err := fmt.Fprintf(&d.preParse,
 				`
 					var %s_ []bool
-					cli.Flags().BoolSliceVarP(&%s_, %q, %q, %#v, %q)
+					cli.Flags().BoolSliceVarP(&%s_, %q, %q, %s, %q)
 				`,
 				name,
 				name,
 				full,
 				short,
-				v,
+				strings.Replace(fmt.Sprintf("%#v", v), "interface {}", etyp.Kind().Type(), 1),
 				doc,
 			); err != nil {
 				return err
@@ -432,7 +432,7 @@ func (d *driver) flag(name, full, short string, t gofire.Typ, ptr bool, val stri
 			if _, err := fmt.Fprintf(&d.preParse,
 				`
 					var %s_ %s
-					cli.Flags().%sSliceVarP(&%s_, %q, %q, %#v, %q)
+					cli.Flags().%sSliceVarP(&%s_, %q, %q, %s, %q)
 				`,
 				name,
 				ts.Type(),
@@ -440,7 +440,7 @@ func (d *driver) flag(name, full, short string, t gofire.Typ, ptr bool, val stri
 				name,
 				full,
 				short,
-				v,
+				strings.Replace(fmt.Sprintf("%#v", v), "interface {}", etyp.Kind().Type(), 1),
 				doc,
 			); err != nil {
 				return err
@@ -470,7 +470,7 @@ func (d *driver) flag(name, full, short string, t gofire.Typ, ptr bool, val stri
 			if _, err := fmt.Fprintf(&d.preParse,
 				`
 					var %s_ %s
-					cli.Flags().%sSliceVarP(&%s_, %q, %q, %#v, %q)
+					cli.Flags().%sSliceVarP(&%s_, %q, %q, %s, %q)
 				`,
 				name,
 				ts.Type(),
@@ -478,7 +478,44 @@ func (d *driver) flag(name, full, short string, t gofire.Typ, ptr bool, val stri
 				name,
 				full,
 				short,
-				v,
+				strings.Replace(fmt.Sprintf("%#v", v), "interface {}", etyp.Kind().Type(), 1),
+				doc,
+			); err != nil {
+				return err
+			}
+			// second emit type cast to real flag type into post parse stage.
+			if _, err := fmt.Fprintf(
+				&d.postParse,
+				`
+					%s = %s%s_
+				`,
+				name,
+				amp,
+				name,
+			); err != nil {
+				return err
+			}
+		case gofire.String:
+			v, err := internal.ParseTypeValue(t, val)
+			if err != nil || v == nil {
+				return fmt.Errorf(
+					"can't parse default value for a flag %s type %s: %w",
+					full,
+					t.Type(),
+					err,
+				)
+			}
+			if _, err := fmt.Fprintf(&d.preParse,
+				`
+					var %s_ %s
+					pflag.StringSliceVarP(&%s_, %q, %q, %s, %q)
+				`,
+				name,
+				ts.Type(),
+				name,
+				full,
+				short,
+				strings.Replace(fmt.Sprintf("%#v", v), "interface {}", etyp.Kind().Type(), 1),
 				doc,
 			); err != nil {
 				return err

@@ -115,7 +115,7 @@ exit status 2
 			function: "echo",
 			params:   []string{"-b=test", "--g1.flag1=100"},
 			out: `Flag --g1.flag1 has been deprecated, deprecated: flag 1 doc.
-1:100 2:test
+1:100 2:test 3:[10.5 10]
 `,
 		},
 		"echo group params with invalid tags fail on driver generation": {
