@@ -495,6 +495,43 @@ func TestParse(t *testing.T) {
 				Results: []string{"int", "int", "int"},
 			},
 		},
+		"valid go package with valid function definition and group complex data tag reference with tags should produce expected command": {
+			ctx: context.TODO(),
+			dir: fstest.MapFS{
+				"file.go": {
+					Data: escape(`
+						package foo
+
+						func bar(cz z) {
+						}
+					`),
+				},
+				"struct.go": {
+					Data: escape(`
+						package foo
+
+						type z struct {
+							long map[string][]int # json:"long"  gofire:"short=test , default = { 'zzzz':{1,2,3}, ddd : { 2, }}"#
+						}
+					`),
+				},
+			},
+			pckg:     "foo",
+			function: "bar",
+			cmd: &gofire.Command{
+				Package:  "foo",
+				Function: "bar",
+				Parameters: []gofire.Parameter{
+					gofire.Group{
+						Name: "cz",
+						Flags: []gofire.Flag{
+							{Full: "long", Short: "test", Default: `{ "zzzz":{1,2,3}, ddd : { 2, }}`, Type: gofire.TMap{KTyp: gofire.TPrimitive{TKind: gofire.String}, VTyp: gofire.TSlice{ETyp: gofire.TPrimitive{TKind: gofire.Int}}}},
+						},
+						Type: gofire.TStruct{Typ: "z"},
+					},
+				},
+			},
+		},
 		"valid go package with valid function definition and group reference with invalid tags format should produce expected error": {
 			ctx: context.TODO(),
 			dir: fstest.MapFS{
@@ -518,7 +555,7 @@ func TestParse(t *testing.T) {
 			},
 			pckg:     "foo",
 			function: "bar",
-			err:      errors.New("ast file struct.go in package foo group type z ast parsing error, field bad string `gofire:\"short=b=a=d\"` tag can't be parsed, can't parse tag short=b=a=d as key=value pair in gofire:\"short=b=a=d\""),
+			err:      errors.New("ast file struct.go in package foo group type z ast parsing error, field bad string `gofire:\"short=b=a=d\"` tag can't be parsed, can't parse tag short=b=a=d short name b=a=d is not alphanumeric"),
 		},
 		"valid go package with valid function definition and group reference with invalid tags should produce expected error": {
 			ctx: context.TODO(),

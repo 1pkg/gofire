@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/1pkg/gofire"
 )
@@ -380,34 +381,58 @@ func (p parser) typ(tp ast.Expr) (gofire.Typ, error) {
 }
 
 func (p parser) tagflag(rawTag string) (*gofire.Flag, bool, error) {
+	// Splits the provided string tokens based on balanced char sequences.
+	split := func(s string, by string, bcs ...string) []string {
+		tokens := strings.Split(s, by)
+		var accum string
+		result := make([]string, 0, len(tokens))
+	loop:
+		for _, t := range tokens {
+			accum += t
+			var count, prev int = 0, -1
+			for _, c := range bcs {
+				cnt := strings.Count(accum, c)
+				if prev != -1 && prev != cnt {
+					accum += by
+					continue loop
+				}
+				prev = cnt
+				count += cnt
+			}
+			if count%2 != 0 {
+				accum += by
+				continue loop
+			}
+			result = append(result, strings.TrimSpace(accum))
+			accum = ""
+		}
+		return result
+	}
 	var f gofire.Flag
 	// Skip empty tags they will be transformed into auto flags.
 	if rawTag == "" {
 		return &f, false, nil
 	}
 	rawTag = strings.Trim(rawTag, "`")
-	tags := strings.Split(rawTag, " ")
+	tags := split(rawTag, " ", `"`)
 	for _, ftag := range tags {
-		parts := strings.Split(ftag, ":")
+		parts := strings.SplitN(ftag, ":", 2)
 		if len(parts) != 2 || parts[0] != "gofire" {
 			continue
 		}
+		tags := split(strings.Trim(parts[1], `"`), ",", "{", "}")
 		// Skip omitted tags they will be transformed into auto flags.
-		if parts[1] == `"-"` {
+		if len(tags) == 1 && strings.TrimSpace(tags[0]) == "-" {
 			return &f, false, nil
 		}
-		tags := strings.Split(strings.Trim(parts[1], `"`), ",")
 		for _, tag := range tags {
-			tv := strings.Split(tag, "=")
-			ltv := len(tv)
-			if ltv > 2 {
-				return nil, false, fmt.Errorf("can't parse tag %s as key=value pair in %s", tag, rawTag)
-			}
+			tv := strings.SplitN(tag, "=", 2)
 			// Validate key/values and parse the value.
 			var val interface{}
-			switch tv[0] {
+			tkn := strings.TrimSpace(tv[0])
+			switch tkn {
 			case "short", "default":
-				if ltv != 2 {
+				if len(tv) != 2 {
 					return nil, false, fmt.Errorf(
 						"can't parse tag %s missing %q key value in %s",
 						tag,
@@ -416,12 +441,20 @@ func (p parser) tagflag(rawTag string) (*gofire.Flag, bool, error) {
 					)
 
 				}
-				val = tv[1]
+				v := strings.TrimSpace(tv[1])
+				if tkn == "short" {
+					for _, r := range v {
+						if !(unicode.IsLetter(r) || unicode.IsDigit(r)) {
+							return nil, false, fmt.Errorf("can't parse tag %s short name %s is not alphanumeric", tag, tv[1])
+						}
+					}
+				}
+				val = strings.ReplaceAll(v, `'`, `"`)
 			case "deprecated", "hidden":
-				if ltv == 1 {
+				if len(tv) == 1 {
 					val = true
 				} else {
-					valb, err := strconv.ParseBool(tv[1])
+					valb, err := strconv.ParseBool(strings.TrimSpace(tv[1]))
 					if err != nil {
 						return nil, false, fmt.Errorf(
 							"can't parse tag %s as boolean for %q key and %s value in %s",
@@ -442,7 +475,7 @@ func (p parser) tagflag(rawTag string) (*gofire.Flag, bool, error) {
 				)
 			}
 			// Fill key/values after the validation and parsing.
-			switch tv[0] {
+			switch tkn {
 			case "short":
 				f.Short = val.(string)
 			case "default":
