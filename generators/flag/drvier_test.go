@@ -35,7 +35,7 @@ func TestFlagDriver(t *testing.T) {
 			params:   []string{"-help"},
 			out: `echo documentation string.
 echo -a="" -b=0 -c=0 -d=false -e=0.0 arg0 arg1 arg2 arg3 arg4 [-help -h]
--a string (default "") -b int (default 0) -c uint64 (default 0) -d bool (default false) -e float32 (default 0.0) arg 0 string arg 1 int arg 2 uint64 arg 3 bool arg 4 float32
+func echo(_ context.Context, a *string, b *int, c *uint64, d *bool, e *float32, a1 string, b1 int, c1 uint64, d1 bool, e1 float32) int, -a string (default "") -b int (default 0) -c uint64 (default 0) -d bool (default false) -e float32 (default 0.0) arg 0 string arg 1 int arg 2 uint64 arg 3 bool arg 4 float32
 `,
 		},
 		"echo primitive params types should produce expected error on invalid flags": {
@@ -47,7 +47,7 @@ echo -a="" -b=0 -c=0 -d=false -e=0.0 arg0 arg1 arg2 arg3 arg4 [-help -h]
 			out: `invalid value "test" for flag -e: parse error
 echo documentation string.
 echo -a="" -b=0 -c=0 -d=false -e=0.0 arg0 arg1 arg2 arg3 arg4 [-help -h]
--a string (default "") -b int (default 0) -c uint64 (default 0) -d bool (default false) -e float32 (default 0.0) arg 0 string arg 1 int arg 2 uint64 arg 3 bool arg 4 float32
+func echo(_ context.Context, a *string, b *int, c *uint64, d *bool, e *float32, a1 string, b1 int, c1 uint64, d1 bool, e1 float32) int, -a string (default "") -b int (default 0) -c uint64 (default 0) -d bool (default false) -e float32 (default 0.0) arg 0 string arg 1 int arg 2 uint64 arg 3 bool arg 4 float32
 exit status 2
 `,
 		},
@@ -59,7 +59,7 @@ exit status 2
 			err:      errors.New("exit status 1"),
 			out: `echo documentation string.
 echo -a="" -b=0 -c=0 -d=false -e=0.0 arg0 arg1 arg2 arg3 arg4 [-help -h]
--a string (default "") -b int (default 0) -c uint64 (default 0) -d bool (default false) -e float32 (default 0.0) arg 0 string arg 1 int arg 2 uint64 arg 3 bool arg 4 float32
+func echo(_ context.Context, a *string, b *int, c *uint64, d *bool, e *float32, a1 string, b1 int, c1 uint64, d1 bool, e1 float32) int, -a string (default "") -b int (default 0) -c uint64 (default 0) -d bool (default false) -e float32 (default 0.0) arg 0 string arg 1 int arg 2 uint64 arg 3 bool arg 4 float32
 argument 1-th is required
 exit status 2
 `,
@@ -91,7 +91,7 @@ exit status 2
 			err:      errors.New("exit status 1"),
 			out: `invalid value "group" for flag -g1.a: parse error
 echo -g1.a=10 -g1.b=10 -g2.a=10 -g2.b=10 [-help -h]
--g1.a int some fields doc. (default 10) -g1.b int some fields doc. (default 10) -g2.a int some fields doc. (default 10) -g2.b int some fields doc. (default 10)
+func echo(g1 g, g2 g), -g1.a int some fields doc. (default 10) -g1.b int some fields doc. (default 10) -g2.a int some fields doc. (default 10) -g2.b int some fields doc. (default 10)
 exit status 2
 `,
 		},

@@ -541,6 +541,44 @@ func TestParse(t *testing.T) {
 				},
 			},
 		},
+		"valid go package with valid function definition and group complex data tag with delimeters reference with tags should produce expected command": {
+			ctx: context.TODO(),
+			dir: fstest.MapFS{
+				"file.go": {
+					Data: escape(`
+						package foo
+
+						func bar(cz z) {
+						}
+					`),
+				},
+				"struct.go": {
+					Data: escape(`
+						package foo
+
+						type z struct {
+							long map[string][]int # json:"long"  gofire:"default = {'zzzz: zzzz':{1,2,3}, 'ddd,,,':{}}"#
+						}
+					`),
+				},
+			},
+			pckg:     "foo",
+			function: "bar",
+			cmd: &gofire.Command{
+				Package:    "foo",
+				Function:   "bar",
+				Definition: "func bar(cz z)",
+				Parameters: []gofire.Parameter{
+					gofire.Group{
+						Name: "cz",
+						Flags: []gofire.Flag{
+							{Full: "long", Short: "test", Default: `{"zzzz: zzzz":{1,2,3}, "ddd,,,":{}}`, Type: gofire.TMap{KTyp: gofire.TPrimitive{TKind: gofire.String}, VTyp: gofire.TSlice{ETyp: gofire.TPrimitive{TKind: gofire.Int}}}},
+						},
+						Type: gofire.TStruct{Typ: "z"},
+					},
+				},
+			},
+		},
 		"valid go package with valid function definition and group reference with invalid tags format should produce expected error": {
 			ctx: context.TODO(),
 			dir: fstest.MapFS{

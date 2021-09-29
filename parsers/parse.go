@@ -381,6 +381,9 @@ func (p parser) typ(tp ast.Expr) (gofire.Typ, error) {
 	}
 }
 
+// ! Note that some delimeters used in Splitb ('{', '}', '"')
+// ! inside default tag value might still break the parser.
+// ! Current tag value parser may need to be revisited in future.
 func (p parser) tagflag(rawTag string) (*gofire.Flag, bool, error) {
 	var f gofire.Flag
 	// Skip empty tags they will be transformed into auto flags.

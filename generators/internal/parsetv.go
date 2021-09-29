@@ -51,6 +51,9 @@ func ParseTypeValue(t gofire.Typ, val string) (interface{}, error) {
 	return nil, nil
 }
 
+// ! Note that some delimeters used in Splitb ('{', '}')
+// ! inside default value might still break the parser.
+// ! Current value parser may need to be revisited in future.
 func parseTypeValueRange(t gofire.Typ, size int, val string) (interface{}, error) {
 	if val == "" || val == "{}" {
 		return []interface{}{}, nil
@@ -82,6 +85,9 @@ func parseTypeValueRange(t gofire.Typ, size int, val string) (interface{}, error
 	return r, nil
 }
 
+// ! Note that some delimeters used in Splitb ('{', '}')
+// ! inside default value might still break the parser.
+// ! Current value parser may need to be revisited in future.
 func parseTypeValueMap(tk, tv gofire.Typ, val string) (interface{}, error) {
 	if val == "" || val == "{}" {
 		return map[interface{}]interface{}{}, nil

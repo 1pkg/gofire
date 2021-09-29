@@ -38,7 +38,7 @@ func (d driver) Output(cmd gofire.Command) (string, error) {
 		}
 	}
 	if len(d.inputList) > 0 {
-		if _, err := buf.WriteString("m.inputs[0].Focus()"); err != nil {
+		if _, err := buf.WriteString("m.inputs[0].Focus();"); err != nil {
 			return "", err
 		}
 	}
@@ -159,7 +159,7 @@ func (d driver) Template() string {
 					b.WriteRune('\n')
 				}
 			}
-			_, _ = fmt.Fprintf(&b, "\n\n[Submit]\n\n")
+			_, _ = fmt.Fprintf(&b, "\n\n[Execute]\n\n")
 			return b.String()
 		}
 		

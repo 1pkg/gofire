@@ -19,6 +19,11 @@ func TestBubbleTeaDriver(t *testing.T) {
 		function string
 		err      error
 	}{
+		"echo no args types should produce expected output on valid params": {
+			dir:      "echo_primitive_args",
+			pckg:     "main",
+			function: "echo",
+		},
 		"echo primitive args types should produce expected output on valid params": {
 			dir:      "echo_primitive_args",
 			pckg:     "main",
