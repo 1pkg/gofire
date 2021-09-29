@@ -10,7 +10,7 @@ import (
 	_ "github.com/1pkg/gofire/generators/bubbletea"
 	_ "github.com/1pkg/gofire/generators/cobra"
 	_ "github.com/1pkg/gofire/generators/flag"
-	_ "github.com/1pkg/gofire/generators/gofire.
+	_ "github.com/1pkg/gofire/generators/gofire"
 )
 
 func main() {

@@ -10,7 +10,7 @@ import (
 type DriverName string
 
 const (
-	DriverNameGofire     DriverName = "gofire"
+	DriverNameGofire    DriverName = "gofire"
 	DriverNameFlag      DriverName = "flag"
 	DriverNamePFlag     DriverName = "pflag"
 	DriverNameCobra     DriverName = "cobra"

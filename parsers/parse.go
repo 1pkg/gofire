@@ -74,6 +74,7 @@ func Parse(ctx context.Context, dir fs.FS, pckg, function string) (*gofire.Comma
 					var cmd gofire.Command
 					cmd.Package = pckg
 					cmd.Function = function
+					cmd.Definition = file.definition(fdecl.Pos(), fdecl.Type.End())
 					cmd.Doc = strings.TrimSpace(fdecl.Doc.Text())
 					cmd.Results = p.results(file, fdecl)
 					params, context, err := p.parameters(file, fdecl)
@@ -381,46 +382,19 @@ func (p parser) typ(tp ast.Expr) (gofire.Typ, error) {
 }
 
 func (p parser) tagflag(rawTag string) (*gofire.Flag, bool, error) {
-	// Splits the provided string tokens based on balanced char sequences.
-	split := func(s string, by string, bcs ...string) []string {
-		tokens := strings.Split(s, by)
-		var accum string
-		result := make([]string, 0, len(tokens))
-	loop:
-		for _, t := range tokens {
-			accum += t
-			var count, prev int = 0, -1
-			for _, c := range bcs {
-				cnt := strings.Count(accum, c)
-				if prev != -1 && prev != cnt {
-					accum += by
-					continue loop
-				}
-				prev = cnt
-				count += cnt
-			}
-			if count%2 != 0 {
-				accum += by
-				continue loop
-			}
-			result = append(result, strings.TrimSpace(accum))
-			accum = ""
-		}
-		return result
-	}
 	var f gofire.Flag
 	// Skip empty tags they will be transformed into auto flags.
 	if rawTag == "" {
 		return &f, false, nil
 	}
 	rawTag = strings.Trim(rawTag, "`")
-	tags := split(rawTag, " ", `"`)
+	tags := gofire.Splitb(rawTag, " ", `"`)
 	for _, ftag := range tags {
 		parts := strings.SplitN(ftag, ":", 2)
 		if len(parts) != 2 || parts[0] != "gofire" {
 			continue
 		}
-		tags := split(strings.Trim(parts[1], `"`), ",", "{", "}")
+		tags := gofire.Splitb(strings.Trim(parts[1], `"`), ",", "{", "}")
 		// Skip omitted tags they will be transformed into auto flags.
 		if len(tags) == 1 && strings.TrimSpace(tags[0]) == "-" {
 			return &f, false, nil

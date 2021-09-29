@@ -62,7 +62,12 @@ func parseTypeValueRange(t gofire.Typ, size int, val string) (interface{}, error
 	if len(strings.TrimSpace(nval)) == 0 {
 		return []interface{}{}, nil
 	}
-	pvals := strings.Split(nval, ",")
+	pvals := gofire.Splitb(nval, ",", "{", "}")
+	// Allow trailing coma in range definitions.
+	if l := len(pvals); l > 0 && strings.TrimSpace(pvals[l-1]) == "" {
+		pvals = pvals[:l-1]
+	}
+	// For arrays specifically we want to be sure that the sizes are matching.
 	if size > -1 && len(pvals) != size {
 		return nil, fmt.Errorf("invalid value %q can't be parsed as an array %d", val, size)
 	}
@@ -88,7 +93,11 @@ func parseTypeValueMap(tk, tv gofire.Typ, val string) (interface{}, error) {
 	if len(strings.TrimSpace(nval)) == 0 {
 		return map[interface{}]interface{}{}, nil
 	}
-	pairs := strings.Split(nval, ",")
+	pairs := gofire.Splitb(nval, ",", "{", "}")
+	// Allow trailing coma in map definitions.
+	if l := len(pairs); l > 0 && strings.TrimSpace(pairs[l-1]) == "" {
+		pairs = pairs[:l-1]
+	}
 	pkeys := make([]string, 0, len(pairs))
 	pvals := make([]string, 0, len(pairs))
 	for _, pair := range pairs {

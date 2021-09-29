@@ -270,6 +270,15 @@ func TestParseTypeValue(t *testing.T) {
 			val: `{ 100:10, test:aaa }`,
 			err: errors.New(`strconv.ParseUint: parsing "test": invalid syntax`),
 		},
+		"complex nested type with valid value should be parsed properly": {
+			typ: gofire.TMap{KTyp: gofire.TPrimitive{TKind: gofire.String}, VTyp: gofire.TSlice{ETyp: gofire.TArray{ETyp: gofire.TPrimitive{TKind: gofire.Int}, Size: 3}}},
+			val: `{ a:{{1,2,3}}, "c d":{}, test:{{0,0,0}, {1,-1,1,} , }, }`,
+			out: map[interface{}]interface{}{
+				"a":    []interface{}{[]interface{}{int64(1), int64(2), int64(3)}},
+				"c d":  []interface{}{},
+				"test": []interface{}{[]interface{}{int64(0), int64(0), int(0)}, []interface{}{int64(1), int64(-1), int64(1)}},
+			},
+		},
 	}
 	for tname, tcase := range table {
 		t.Run(tname, func(t *testing.T) {

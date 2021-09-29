@@ -3,8 +3,6 @@ package bubbletea
 import (
 	"bytes"
 	"fmt"
-	"math/rand"
-	"time"
 
 	"github.com/1pkg/gofire"
 	"github.com/1pkg/gofire/generators"
@@ -30,7 +28,7 @@ func (d driver) Output(cmd gofire.Command) (string, error) {
 				{
 					input := textinput.NewModel()
 					input.Placeholder = %q
-					input.CharLimit = 256
+					input.CharLimit = 1024
 					m.inputs = append(m.inputs, input)
 				}
 			`,
@@ -44,6 +42,9 @@ func (d driver) Output(cmd gofire.Command) (string, error) {
 			return "", err
 		}
 	}
+	if _, err := fmt.Fprintf(&buf, `m.doc = "%s\n%s";`, cmd.Doc, cmd.Definition); err != nil {
+		return "", err
+	}
 	if _, err := buf.WriteString(
 		`
 			if err = bubbletea.NewProgram(m).Start(); err != nil {
@@ -56,7 +57,18 @@ func (d driver) Output(cmd gofire.Command) (string, error) {
 	); err != nil {
 		return "", err
 	}
-	if _, err := buf.Write(d.postParse.Bytes()); err != nil {
+	if _, err := fmt.Fprintf(
+		&buf,
+		`
+			if err = func() error {
+				%s
+				return nil
+			}(); err != nil {
+				return
+			}
+		`,
+		d.postParse.String(),
+	); err != nil {
 		return "", err
 	}
 	return buf.String(), nil
@@ -74,35 +86,33 @@ func (d driver) Imports() []string {
 		`"fmt"`,
 		`"strconv"`,
 		`"github.com/charmbracelet/bubbles/textinput"`,
-		`"github.com/charmbracelet/bubbletea"`,
+		`bubbletea "github.com/charmbracelet/bubbletea"`,
 	}
 }
 
 func (d driver) Template() string {
-	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
-	prefix := fmt.Sprintf("%x", rnd.Uint64())
-	return fmt.Sprintf(`
+	return `
 		package {{.Package}}
 
 		import(
 			{{.Import}}
 		)
 
-		type %s{{.Function}} struct {
+		type _bubbletea{{.Function}} struct {
 			index	int
 			inputs	[]textinput.Model
+			doc 	string
 			err		error
 		}
 
-		func (%s{{.Function}}) Init() bubbletea.Cmd {
+		func (_bubbletea{{.Function}}) Init() bubbletea.Cmd {
 			return textinput.Blink
 		}
 		
-		func (m *%s{{.Function}}) Update(msg bubbletea.Msg) (bubbletea.Model, bubbletea.Cmd) {
+		func (m *_bubbletea{{.Function}}) Update(msg bubbletea.Msg) (bubbletea.Model, bubbletea.Cmd) {
 			kmsg, ok := msg.(bubbletea.KeyMsg)
 			if !ok {
-				m.err = fmt.Errorf("received unexpected message %%v", msg)
-				return m, bubbletea.Quit
+				return m, nil
 			}
 			cmd := kmsg.String()
 			switch cmd {
@@ -140,8 +150,9 @@ func (d driver) Template() string {
 			}
 		}
 		
-		func (m %s{{.Function}}) View() string {
+		func (m _bubbletea{{.Function}}) View() string {
 			var b strings.Builder
+			_, _ = fmt.Fprintf(&b, m.doc + "\n\n")
 			for i := range m.inputs {
 				b.WriteString(m.inputs[i].View())
 				if i < len(m.inputs)-1 {
@@ -155,23 +166,23 @@ func (d driver) Template() string {
 		{{.Doc}}
 		func {{.Function}}(ctx context.Context) ({{.Return}}) {
 			{{.Vars}}
-			m := new(%s{{.Function}})
+			m := new(_bubbletea{{.Function}})
 			{{.Body}}
 			{{.Groups}}
 			{{.Call}}
 			return
 		}
-	`, prefix, prefix, prefix, prefix, prefix)
+	`
 }
 
 func (d *driver) VisitArgument(a gofire.Argument) error {
 	_ = d.Driver.VisitArgument(a)
 	p := d.Last()
-	tp, ok := a.Type.(gofire.TPrimitive)
+	tp, ok := p.Type.(gofire.TPrimitive)
 	if !ok {
 		return fmt.Errorf(
 			"driver %s: non primitive argument types are not supported, got an argument %s %s",
-			generators.DriverNameCobra,
+			generators.DriverNameBubbleTea,
 			p.Name,
 			a.Type.Type(),
 		)
@@ -320,6 +331,6 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive) error 
 			name,
 		)
 	}
-	d.inputList = append(d.inputList, fmt.Sprintf("arg %d %s", index, t.Type()))
+	d.inputList = append(d.inputList, fmt.Sprintf("arg [%d] %s", index, t.Type()))
 	return nil
 }

@@ -160,10 +160,11 @@ func TestParse(t *testing.T) {
 			pckg:     "foo",
 			function: "bar",
 			cmd: &gofire.Command{
-				Package:  "foo",
-				Function: "bar",
-				Doc:      "bar function doc.",
-				Context:  true,
+				Package:    "foo",
+				Function:   "bar",
+				Definition: "func bar(ctx context.Context, a int8, _ uint, b *string, c *float32, d *float64) int",
+				Doc:        "bar function doc.",
+				Context:    true,
 				Parameters: []gofire.Parameter{
 					gofire.Argument{Index: 0, Type: gofire.TPrimitive{TKind: gofire.Int8}},
 					gofire.Placeholder{Type: gofire.TPrimitive{TKind: gofire.Uint}},
@@ -193,10 +194,11 @@ func TestParse(t *testing.T) {
 			pckg:     "foo",
 			function: "bar",
 			cmd: &gofire.Command{
-				Package:  "foo",
-				Function: "bar",
-				Doc:      "bar function doc.",
-				Context:  true,
+				Package:    "foo",
+				Function:   "bar",
+				Definition: "func bar(ctx context.Context, a int8, _ uint, b *string, c *float32, d *float64, f ...int) int",
+				Doc:        "bar function doc.",
+				Context:    true,
 				Parameters: []gofire.Parameter{
 					gofire.Argument{Index: 0, Type: gofire.TPrimitive{TKind: gofire.Int8}},
 					gofire.Placeholder{Type: gofire.TPrimitive{TKind: gofire.Uint}},
@@ -227,10 +229,11 @@ func TestParse(t *testing.T) {
 			pckg:     "foo",
 			function: "bar",
 			cmd: &gofire.Command{
-				Package:  "foo",
-				Function: "bar",
-				Doc:      "bar function doc.",
-				Context:  true,
+				Package:    "foo",
+				Function:   "bar",
+				Definition: "func bar(ctx context.Context, a int8, _ uint, b *string, c *float32, d *float64, _ ...int) int",
+				Doc:        "bar function doc.",
+				Context:    true,
 				Parameters: []gofire.Parameter{
 					gofire.Argument{Index: 0, Type: gofire.TPrimitive{TKind: gofire.Int8}},
 					gofire.Placeholder{Type: gofire.TPrimitive{TKind: gofire.Uint}},
@@ -261,10 +264,11 @@ func TestParse(t *testing.T) {
 			pckg:     "foo",
 			function: "bar",
 			cmd: &gofire.Command{
-				Package:  "foo",
-				Function: "bar",
-				Doc:      "bar function doc.",
-				Context:  true,
+				Package:    "foo",
+				Function:   "bar",
+				Definition: "func bar(ctx context.Context, a int8, _ uint, b *string, c *float32, d *float64, f ...*int) int",
+				Doc:        "bar function doc.",
+				Context:    true,
 				Parameters: []gofire.Parameter{
 					gofire.Argument{Index: 0, Type: gofire.TPrimitive{TKind: gofire.Int8}},
 					gofire.Placeholder{Type: gofire.TPrimitive{TKind: gofire.Uint}},
@@ -294,9 +298,10 @@ func TestParse(t *testing.T) {
 			pckg:     "foo",
 			function: "bar",
 			cmd: &gofire.Command{
-				Package:  "foo",
-				Function: "bar",
-				Doc:      "bar function doc.",
+				Package:    "foo",
+				Function:   "bar",
+				Definition: "func bar()",
+				Doc:        "bar function doc.",
 			},
 		},
 		"valid go package with unsupported types in function definition should produce expected error": {
@@ -345,8 +350,9 @@ func TestParse(t *testing.T) {
 			pckg:     "foo",
 			function: "bar",
 			cmd: &gofire.Command{
-				Package:  "foo",
-				Function: "bar",
+				Package:    "foo",
+				Function:   "bar",
+				Definition: "func bar(int, int32, int64, z, ...int32)",
 				Parameters: []gofire.Parameter{
 					gofire.Placeholder{Type: gofire.TPrimitive{TKind: gofire.Int}},
 					gofire.Placeholder{Type: gofire.TPrimitive{TKind: gofire.Int32}},
@@ -394,8 +400,9 @@ func TestParse(t *testing.T) {
 			pckg:     "foo",
 			function: "bar",
 			cmd: &gofire.Command{
-				Package:  "foo",
-				Function: "bar",
+				Package:    "foo",
+				Function:   "bar",
+				Definition: "func bar(a int8, b []string, cz z, _ z)",
 				Parameters: []gofire.Parameter{
 					gofire.Argument{Index: 0, Type: gofire.TPrimitive{TKind: gofire.Int8}},
 					gofire.Argument{Index: 1, Type: gofire.TSlice{ETyp: gofire.TPrimitive{TKind: gofire.String}}},
@@ -475,8 +482,9 @@ func TestParse(t *testing.T) {
 			pckg:     "foo",
 			function: "bar",
 			cmd: &gofire.Command{
-				Package:  "foo",
-				Function: "bar",
+				Package:    "foo",
+				Function:   "bar",
+				Definition: "func bar(a int8, b []string, cz z) (r1, r2, r3 int)",
 				Parameters: []gofire.Parameter{
 					gofire.Argument{Index: 0, Type: gofire.TPrimitive{TKind: gofire.Int8}},
 					gofire.Argument{Index: 1, Type: gofire.TSlice{ETyp: gofire.TPrimitive{TKind: gofire.String}}},
@@ -519,8 +527,9 @@ func TestParse(t *testing.T) {
 			pckg:     "foo",
 			function: "bar",
 			cmd: &gofire.Command{
-				Package:  "foo",
-				Function: "bar",
+				Package:    "foo",
+				Function:   "bar",
+				Definition: "func bar(cz z)",
 				Parameters: []gofire.Parameter{
 					gofire.Group{
 						Name: "cz",

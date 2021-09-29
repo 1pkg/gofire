@@ -61,6 +61,7 @@ func (g Group) Accept(v Visitor) error {
 type Command struct {
 	Package    string
 	Function   string
+	Definition string
 	Doc        string
 	Context    bool
 	Results    []string
