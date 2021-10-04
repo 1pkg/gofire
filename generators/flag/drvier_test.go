@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -105,8 +104,8 @@ exit status 2
 	}
 	for tname, tcase := range table {
 		t.Run(tname, func(t *testing.T) {
-			fs := os.DirFS(filepath.Join("tcases", tcase.dir))
-			out, err := internal.GoExecute(context.TODO(), generators.DriverNameFlag, fs, tcase.pckg, tcase.function, "run -tags=tcases", tcase.params...)
+			exec := internal.GoExec("run -tags=tcases .", tcase.params...)
+			out, err := exec.RunOnTest(context.TODO(), generators.DriverNameFlag, filepath.Join("tcases", tcase.dir), tcase.pckg, tcase.function)
 			if fmt.Sprintf("%v", tcase.err) != fmt.Sprintf("%v", err) {
 				t.Fatalf("expected error message %q but got %q\n%v", tcase.err, err, out)
 			}

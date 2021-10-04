@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,6 +12,17 @@ import (
 	"github.com/1pkg/gofire/generators"
 	"github.com/1pkg/gofire/generators/internal"
 )
+
+func init() {
+	dir, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, _ = internal.GoExec("go get github.com/charmbracelet/bubbletea")(context.TODO(), dir)
+	_, _ = internal.GoExec("go get github.com/charmbracelet/bubbles")(context.TODO(), dir)
+	_, _ = internal.GoExec("go get github.com/charmbracelet/lipgloss")(context.TODO(), dir)
+	_, _ = internal.GoExec("go get github.com/atotto/clipboard")(context.TODO(), dir)
+}
 
 func TestBubbleTeaDriver(t *testing.T) {
 	table := map[string]struct {
@@ -50,8 +62,8 @@ func TestBubbleTeaDriver(t *testing.T) {
 	}
 	for tname, tcase := range table {
 		t.Run(tname, func(t *testing.T) {
-			fs := os.DirFS(filepath.Join("tcases", tcase.dir))
-			out, err := internal.GoExecute(context.TODO(), generators.DriverNameBubbleTea, fs, tcase.pckg, tcase.function, "build -tags=tcases")
+			exec := internal.GoExec("build -tags=tcases .")
+			out, err := exec.RunOnTest(context.TODO(), generators.DriverNameBubbleTea, filepath.Join("tcases", tcase.dir), tcase.pckg, tcase.function)
 			if fmt.Sprintf("%v", tcase.err) != fmt.Sprintf("%v", err) {
 				t.Fatalf("expected error message %q but got %q\n%v", tcase.err, err, out)
 			}
