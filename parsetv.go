@@ -1,48 +1,46 @@
-package internal
+package gofire
 
 import (
 	"fmt"
 	"strconv"
 	"strings"
-
-	"github.com/1pkg/gofire"
 )
 
-func ParseTypeValue(t gofire.Typ, val string) (interface{}, error) {
+func ParseTypeValue(t Typ, val string) (interface{}, error) {
 	k := t.Kind()
 	switch k {
-	case gofire.Array:
-		return parseTypeValueRange(t.(gofire.TArray).ETyp, int(t.(gofire.TArray).Size), val)
-	case gofire.Slice:
-		return parseTypeValueRange(t.(gofire.TSlice).ETyp, -1, val)
-	case gofire.Map:
-		return parseTypeValueMap(t.(gofire.TMap).KTyp, t.(gofire.TMap).VTyp, val)
-	case gofire.Bool:
+	case Array:
+		return parseTypeValueRange(t.(TArray).ETyp, int(t.(TArray).Size), val)
+	case Slice:
+		return parseTypeValueRange(t.(TSlice).ETyp, -1, val)
+	case Map:
+		return parseTypeValueMap(t.(TMap).KTyp, t.(TMap).VTyp, val)
+	case Bool:
 		if val == "" {
 			return false, nil
 		}
 		return strconv.ParseBool(val)
-	case gofire.Int, gofire.Int8, gofire.Int16, gofire.Int32, gofire.Int64:
+	case Int, Int8, Int16, Int32, Int64:
 		if val == "" {
 			return int64(0), nil
 		}
 		return strconv.ParseInt(val, 10, int(k.Base()))
-	case gofire.Uint, gofire.Uint8, gofire.Uint16, gofire.Uint32, gofire.Uint64:
+	case Uint, Uint8, Uint16, Uint32, Uint64:
 		if val == "" {
 			return uint64(0), nil
 		}
 		return strconv.ParseUint(val, 10, int(k.Base()))
-	case gofire.Float32, gofire.Float64:
+	case Float32, Float64:
 		if val == "" {
 			return float64(0.0), nil
 		}
 		return strconv.ParseFloat(val, int(k.Base()))
-	case gofire.Complex64, gofire.Complex128:
+	case Complex64, Complex128:
 		if val == "" {
 			return complex128(0.0), nil
 		}
 		return strconv.ParseComplex(val, int(k.Base()))
-	case gofire.String:
+	case String:
 		if sval, err := strconv.Unquote(val); err == nil {
 			return sval, nil
 		}
@@ -54,7 +52,7 @@ func ParseTypeValue(t gofire.Typ, val string) (interface{}, error) {
 // ! Note that some delimeters used in Splitb ('{', '}')
 // ! inside default value might still break the parser.
 // ! Current value parser may need to be revisited in future.
-func parseTypeValueRange(t gofire.Typ, size int, val string) (interface{}, error) {
+func parseTypeValueRange(t Typ, size int, val string) (interface{}, error) {
 	if val == "" || val == "{}" {
 		return []interface{}{}, nil
 	}
@@ -65,7 +63,7 @@ func parseTypeValueRange(t gofire.Typ, size int, val string) (interface{}, error
 	if len(strings.TrimSpace(nval)) == 0 {
 		return []interface{}{}, nil
 	}
-	pvals := gofire.Splitb(nval, ",", "{", "}")
+	pvals := Splitb(nval, ",", "{", "}")
 	// Allow trailing coma in range definitions.
 	if l := len(pvals); l > 0 && strings.TrimSpace(pvals[l-1]) == "" {
 		pvals = pvals[:l-1]
@@ -88,7 +86,7 @@ func parseTypeValueRange(t gofire.Typ, size int, val string) (interface{}, error
 // ! Note that some delimeters used in Splitb ('{', '}')
 // ! inside default value might still break the parser.
 // ! Current value parser may need to be revisited in future.
-func parseTypeValueMap(tk, tv gofire.Typ, val string) (interface{}, error) {
+func parseTypeValueMap(tk, tv Typ, val string) (interface{}, error) {
 	if val == "" || val == "{}" {
 		return map[interface{}]interface{}{}, nil
 	}
@@ -99,7 +97,7 @@ func parseTypeValueMap(tk, tv gofire.Typ, val string) (interface{}, error) {
 	if len(strings.TrimSpace(nval)) == 0 {
 		return map[interface{}]interface{}{}, nil
 	}
-	pairs := gofire.Splitb(nval, ",", "{", "}")
+	pairs := Splitb(nval, ",", "{", "}")
 	// Allow trailing coma in map definitions.
 	if l := len(pairs); l > 0 && strings.TrimSpace(pairs[l-1]) == "" {
 		pairs = pairs[:l-1]

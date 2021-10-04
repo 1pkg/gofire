@@ -133,8 +133,8 @@ func (d *driver) VisitArgument(a gofire.Argument) error {
 func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 	_ = d.Driver.VisitFlag(f, g)
 	p := d.Last()
-	typ := f.Type
-	tprt, ptr := f.Type.(gofire.TPtr)
+	typ := p.Type
+	tprt, ptr := typ.(gofire.TPtr)
 	if ptr {
 		typ = tprt.ETyp
 	}
@@ -384,7 +384,7 @@ func (d *driver) flag(name, full, short string, t gofire.Typ, ptr bool, val stri
 		etyp := ts.ETyp
 		switch etyp.Kind() {
 		case gofire.Bool:
-			v, err := internal.ParseTypeValue(t, val)
+			v, err := gofire.ParseTypeValue(t, val)
 			if err != nil || v == nil {
 				return fmt.Errorf(
 					"can't parse default value for a flag %s type %s: %w",
@@ -420,7 +420,7 @@ func (d *driver) flag(name, full, short string, t gofire.Typ, ptr bool, val stri
 				return err
 			}
 		case gofire.Int32, gofire.Int64:
-			v, err := internal.ParseTypeValue(t, val)
+			v, err := gofire.ParseTypeValue(t, val)
 			if err != nil || v == nil {
 				return fmt.Errorf(
 					"can't parse default value for a flag %s type %s: %w",
@@ -458,7 +458,7 @@ func (d *driver) flag(name, full, short string, t gofire.Typ, ptr bool, val stri
 				return err
 			}
 		case gofire.Float32, gofire.Float64:
-			v, err := internal.ParseTypeValue(t, val)
+			v, err := gofire.ParseTypeValue(t, val)
 			if err != nil || v == nil {
 				return fmt.Errorf(
 					"can't parse default value for a flag %s type %s: %w",
@@ -496,7 +496,7 @@ func (d *driver) flag(name, full, short string, t gofire.Typ, ptr bool, val stri
 				return err
 			}
 		case gofire.String:
-			v, err := internal.ParseTypeValue(t, val)
+			v, err := gofire.ParseTypeValue(t, val)
 			if err != nil || v == nil {
 				return fmt.Errorf(
 					"can't parse default value for a flag %s type %s: %w",
@@ -540,7 +540,7 @@ func (d *driver) flag(name, full, short string, t gofire.Typ, ptr bool, val stri
 			)
 		}
 	case gofire.Bool:
-		v, err := internal.ParseTypeValue(t, val)
+		v, err := gofire.ParseTypeValue(t, val)
 		if err != nil || v == nil {
 			return fmt.Errorf(
 				"can't parse default value for a flag %s type %s: %w",
@@ -576,7 +576,7 @@ func (d *driver) flag(name, full, short string, t gofire.Typ, ptr bool, val stri
 			return err
 		}
 	case gofire.Int, gofire.Int8, gofire.Int16, gofire.Int32, gofire.Int64:
-		v, err := internal.ParseTypeValue(t, val)
+		v, err := gofire.ParseTypeValue(t, val)
 		if err != nil || v == nil {
 			return fmt.Errorf(
 				"can't parse default value for a flag %s type %s: %w",
@@ -615,7 +615,7 @@ func (d *driver) flag(name, full, short string, t gofire.Typ, ptr bool, val stri
 			return err
 		}
 	case gofire.Uint, gofire.Uint8, gofire.Uint16, gofire.Uint32, gofire.Uint64:
-		v, err := internal.ParseTypeValue(t, val)
+		v, err := gofire.ParseTypeValue(t, val)
 		if err != nil || v == nil {
 			return fmt.Errorf(
 				"can't parse default value for a flag %s type %s: %w",
@@ -654,7 +654,7 @@ func (d *driver) flag(name, full, short string, t gofire.Typ, ptr bool, val stri
 			return err
 		}
 	case gofire.Float32, gofire.Float64:
-		v, err := internal.ParseTypeValue(t, val)
+		v, err := gofire.ParseTypeValue(t, val)
 		if err != nil || v == nil {
 			return fmt.Errorf(
 				"can't parse default value for a flag %s type %s: %w",
@@ -693,7 +693,7 @@ func (d *driver) flag(name, full, short string, t gofire.Typ, ptr bool, val stri
 			return err
 		}
 	case gofire.String:
-		v, err := internal.ParseTypeValue(t, val)
+		v, err := gofire.ParseTypeValue(t, val)
 		if err != nil || v == nil {
 			return fmt.Errorf(
 				"can't parse default value for a flag %s type %s: %w",

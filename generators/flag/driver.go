@@ -113,7 +113,7 @@ func (d *driver) VisitArgument(a gofire.Argument) error {
 func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 	_ = d.Driver.VisitFlag(f, g)
 	p := d.Last()
-	typ := f.Type
+	typ := p.Type
 	tptr, ptr := typ.(gofire.TPtr)
 	if ptr {
 		typ = tptr.ETyp
@@ -365,7 +365,7 @@ func (d *driver) flag(name string, flag string, t gofire.TPrimitive, ptr bool, v
 	}
 	switch k {
 	case gofire.Bool:
-		v, err := internal.ParseTypeValue(t, val)
+		v, err := gofire.ParseTypeValue(t, val)
 		if err != nil || v == nil {
 			return fmt.Errorf(
 				"can't parse default value for a flag %s type %s: %w",
@@ -400,7 +400,7 @@ func (d *driver) flag(name string, flag string, t gofire.TPrimitive, ptr bool, v
 			return err
 		}
 	case gofire.Int, gofire.Int8, gofire.Int16, gofire.Int32, gofire.Int64:
-		v, err := internal.ParseTypeValue(t, val)
+		v, err := gofire.ParseTypeValue(t, val)
 		if err != nil || v == nil {
 			return fmt.Errorf(
 				"can't parse default value for a flag %s type %s: %w",
@@ -450,7 +450,7 @@ func (d *driver) flag(name string, flag string, t gofire.TPrimitive, ptr bool, v
 			return err
 		}
 	case gofire.Uint, gofire.Uint8, gofire.Uint16, gofire.Uint32, gofire.Uint64:
-		v, err := internal.ParseTypeValue(t, val)
+		v, err := gofire.ParseTypeValue(t, val)
 		if err != nil || v == nil {
 			return fmt.Errorf(
 				"can't parse default value for a flag %s type %s: %w",
@@ -500,7 +500,7 @@ func (d *driver) flag(name string, flag string, t gofire.TPrimitive, ptr bool, v
 			return err
 		}
 	case gofire.Float32, gofire.Float64:
-		v, err := internal.ParseTypeValue(t, val)
+		v, err := gofire.ParseTypeValue(t, val)
 		if err != nil || v == nil {
 			return fmt.Errorf(
 				"can't parse default value for a flag %s type %s: %w",
@@ -541,7 +541,7 @@ func (d *driver) flag(name string, flag string, t gofire.TPrimitive, ptr bool, v
 			return err
 		}
 	case gofire.String:
-		v, err := internal.ParseTypeValue(t, val)
+		v, err := gofire.ParseTypeValue(t, val)
 		if err != nil || v == nil {
 			return fmt.Errorf(
 				"can't parse default value for a flag %s type %s: %w",
