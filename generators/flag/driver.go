@@ -363,173 +363,18 @@ func (d *driver) flag(name string, flag string, t gofire.TPrimitive, ptr bool, v
 	if ptr {
 		amp = "&"
 	}
+	var tp string
 	switch k {
 	case gofire.Bool:
-		if _, err := fmt.Fprintf(&d.preParse,
-			`
-				var %s_ bool
-				flag.BoolVar(&%s_, %q, %s, %q)
-			`,
-			name,
-			name,
-			flag,
-			t.Format(val),
-			doc,
-		); err != nil {
-			return err
-		}
-		// second emit type cast to real flag type into post parse stage.
-		if _, err := fmt.Fprintf(
-			&d.postParse,
-			`
-				%s = %s%s_
-			`,
-			name,
-			amp,
-			name,
-		); err != nil {
-			return err
-		}
+		tp = k.Type()
 	case gofire.Int, gofire.Int8, gofire.Int16, gofire.Int32, gofire.Int64:
-		// first emit temp bigger var flag holder into pre parse stage.
-		if _, err := fmt.Fprintf(&d.preParse,
-			`
-				var %s_ int64
-				flag.Int64Var(&%s_, %q, %s, %q)
-			`,
-			name,
-			name,
-			flag,
-			t.Format(val),
-			doc,
-		); err != nil {
-			return err
-		}
-		// second emit type cast to real flag type into post parse stage.
-		if _, err := fmt.Fprintf(
-			&d.postParse,
-			`
-				{
-					const min, max = %d, int64(%d)
-					if %s_ < min || %s_ > max {
-						return fmt.Errorf("flag %s overflow error: value %%d is out of the range [%%d,  %%d]", %s_, min, max)
-					}
-					v := %s(%s_)
-					%s = %sv
-				}
-			`,
-			k.Min(),
-			k.Max(),
-			name,
-			name,
-			flag,
-			name,
-			t.Type(),
-			name,
-			name,
-			amp,
-		); err != nil {
-			return err
-		}
+		tp = gofire.Int64.Type()
 	case gofire.Uint, gofire.Uint8, gofire.Uint16, gofire.Uint32, gofire.Uint64:
-		// first emit temp bigger var flag holder into pre parse stage.
-		if _, err := fmt.Fprintf(&d.preParse,
-			`
-				var %s_ uint64
-				flag.Uint64Var(&%s_, %q, %s, %q)
-			`,
-			name,
-			name,
-			flag,
-			t.Format(val),
-			doc,
-		); err != nil {
-			return err
-		}
-		// second emit type cast to real flag type into post parse stage.
-		if _, err := fmt.Fprintf(
-			&d.postParse,
-			`
-				{
-					const min, max = %d, uint64(%d)
-					if %s_ < min || %s_ > max {
-						return fmt.Errorf("flag %s overflow error: value %%d is out of the range [%%d,  %%d]", %s_, min, max)
-					}
-					v := %s(%s_)
-					%s = %sv
-				}
-			`,
-			k.Min(),
-			k.Max(),
-			name,
-			name,
-			flag,
-			name,
-			t.Type(),
-			name,
-			name,
-			amp,
-		); err != nil {
-			return err
-		}
+		tp = gofire.Uint64.Type()
 	case gofire.Float32, gofire.Float64:
-		// first emit temp bigger var flag holder into pre parse stage.
-		if _, err := fmt.Fprintf(&d.preParse,
-			`
-				var %s_ float64
-				flag.Float64Var(&%s_, %q, %s, %q)
-			`,
-			name,
-			name,
-			flag,
-			t.Format(val),
-			doc,
-		); err != nil {
-			return err
-		}
-		// second emit type cast to real flag type into post parse stage.
-		// for floats we don't need to emit overflow safeguards.
-		if _, err := fmt.Fprintf(
-			&d.postParse,
-			`
-				{
-					v := %s(%s_)
-					%s = %sv
-				}
-			`,
-			t.Type(),
-			name,
-			name,
-			amp,
-		); err != nil {
-			return err
-		}
+		tp = gofire.Float64.Type()
 	case gofire.String:
-		if _, err := fmt.Fprintf(&d.preParse,
-			`
-				var %s_ string
-				flag.StringVar(&%s_, %q, %s, %q)
-			`,
-			name,
-			name,
-			flag,
-			t.Format(val),
-			doc,
-		); err != nil {
-			return err
-		}
-		// second emit type cast to real flag type into post parse stage.
-		if _, err := fmt.Fprintf(
-			&d.postParse,
-			`
-				%s = %s%s_
-			`,
-			name,
-			amp,
-			name,
-		); err != nil {
-			return err
-		}
+		tp = k.Type()
 	default:
 		return fmt.Errorf(
 			"type %s is not supported for a flag %s",
@@ -537,7 +382,37 @@ func (d *driver) flag(name string, flag string, t gofire.TPrimitive, ptr bool, v
 			flag,
 		)
 	}
-	d.usageList = append(d.usageList, fmt.Sprintf(`-%s=%s`, flag, t.Format(val)))
+	if _, err := fmt.Fprintf(&d.preParse,
+		`
+			var %s_ %s
+			flag.%sVar(&%s_, %q, %s, %q)
+		`,
+		name,
+		tp,
+		strings.Title(tp),
+		name,
+		flag,
+		t.Format(val),
+		doc,
+	); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(
+		&d.postParse,
+		`
+			{
+				v := %s(%s_)
+				%s = %sv
+			}
+		`,
+		t.Type(),
+		name,
+		name,
+		amp,
+	); err != nil {
+		return err
+	}
+	d.usageList = append(d.usageList, fmt.Sprintf("-%s=%s", flag, t.Format(val)))
 	d.printList = append(d.printList, fmt.Sprintf("-%s %s %s (default %s)", flag, t.Type(), doc, t.Format(val)))
 	return nil
 }

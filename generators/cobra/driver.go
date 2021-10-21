@@ -384,98 +384,20 @@ func (d *driver) flag(name, full, short string, t gofire.Typ, ptr bool, val inte
 		etyp := ts.ETyp
 		switch etyp.Kind() {
 		case gofire.Bool:
-			if _, err := fmt.Fprintf(&d.preParse,
-				`
-					var %s_ []bool
-					cli.Flags().BoolSliceVarP(&%s_, %q, %q, %s, %q)
-				`,
-				name,
-				name,
-				full,
-				short,
-				t.Format(val),
-				doc,
-			); err != nil {
-				return err
-			}
-			// second emit type cast to real flag type into post parse stage.
-			if _, err := fmt.Fprintf(
-				&d.postParse,
-				`
-					%s = %s%s_
-				`,
-				name,
-				amp,
-				name,
-			); err != nil {
-				return err
-			}
+			fallthrough
 		case gofire.Int32, gofire.Int64:
-			if _, err := fmt.Fprintf(&d.preParse,
-				`
-					var %s_ %s
-					cli.Flags().%sSliceVarP(&%s_, %q, %q, %s, %q)
-				`,
-				name,
-				ts.Type(),
-				strings.Title(etyp.Type()),
-				name,
-				full,
-				short,
-				t.Format(val),
-				doc,
-			); err != nil {
-				return err
-			}
-			// second emit type cast to real flag type into post parse stage.
-			if _, err := fmt.Fprintf(
-				&d.postParse,
-				`
-					%s = %s%s_
-				`,
-				name,
-				amp,
-				name,
-			); err != nil {
-				return err
-			}
+			fallthrough
 		case gofire.Float32, gofire.Float64:
-			if _, err := fmt.Fprintf(&d.preParse,
-				`
-					var %s_ %s
-					cli.Flags().%sSliceVarP(&%s_, %q, %q, %s, %q)
-				`,
-				name,
-				ts.Type(),
-				strings.Title(etyp.Type()),
-				name,
-				full,
-				short,
-				t.Format(val),
-				doc,
-			); err != nil {
-				return err
-			}
-			// second emit type cast to real flag type into post parse stage.
-			if _, err := fmt.Fprintf(
-				&d.postParse,
-				`
-					%s = %s%s_
-				`,
-				name,
-				amp,
-				name,
-			); err != nil {
-				return err
-			}
+			fallthrough
 		case gofire.String:
 			if _, err := fmt.Fprintf(&d.preParse,
 				`
 					var %s_ %s
-					pflag.StringSliceVarP(&%s_, %q, %q, %s, %q)
+					cli.Flags().%sSliceVarP(&%s_, %q, %q, %s, %q)
 				`,
 				name,
 				ts.Type(),
+				strings.Title(etyp.Type()),
 				name,
 				full,
 				short,
@@ -484,7 +406,6 @@ func (d *driver) flag(name, full, short string, t gofire.Typ, ptr bool, val inte
 			); err != nil {
 				return err
 			}
-			// second emit type cast to real flag type into post parse stage.
 			if _, err := fmt.Fprintf(
 				&d.postParse,
 				`
@@ -504,138 +425,30 @@ func (d *driver) flag(name, full, short string, t gofire.Typ, ptr bool, val inte
 			)
 		}
 	case gofire.Bool:
-		if _, err := fmt.Fprintf(&d.preParse,
-			`
-				var %s_ bool
-				cli.Flags().BoolVarP(&%s_, %q, %q, %t, %q)
-			`,
-			name,
-			name,
-			full,
-			short,
-			val,
-			doc,
-		); err != nil {
-			return err
-		}
-		// second emit type cast to real flag type into post parse stage.
-		if _, err := fmt.Fprintf(
-			&d.postParse,
-			`
-				%s = %s%s_
-			`,
-			name,
-			amp,
-			name,
-		); err != nil {
-			return err
-		}
+		fallthrough
 	case gofire.Int, gofire.Int8, gofire.Int16, gofire.Int32, gofire.Int64:
-		// first emit temp bigger var flag holder into pre parse stage.
-		if _, err := fmt.Fprintf(&d.preParse,
-			`
-				var %s_ %s
-				cli.Flags().%sVarP(&%s_, %q, %q, %d, %q)
-			`,
-			name,
-			t.Type(),
-			strings.Title(t.Type()),
-			name,
-			full,
-			short,
-			val,
-			doc,
-		); err != nil {
-			return err
-		}
-		// second emit type cast to real flag type into post parse stage.
-		if _, err := fmt.Fprintf(
-			&d.postParse,
-			`
-				%s = %s%s_
-			`,
-			name,
-			amp,
-			name,
-		); err != nil {
-			return err
-		}
+		fallthrough
 	case gofire.Uint, gofire.Uint8, gofire.Uint16, gofire.Uint32, gofire.Uint64:
-		// first emit temp bigger var flag holder into pre parse stage.
-		if _, err := fmt.Fprintf(&d.preParse,
-			`
-				var %s_ %s
-				cli.Flags().%sVarP(&%s_, %q, %q, %d, %q)
-			`,
-			name,
-			t.Type(),
-			strings.Title(t.Type()),
-			name,
-			full,
-			short,
-			val,
-			doc,
-		); err != nil {
-			return err
-		}
-		// second emit type cast to real flag type into post parse stage.
-		if _, err := fmt.Fprintf(
-			&d.postParse,
-			`
-				%s = %s%s_
-			`,
-			name,
-			amp,
-			name,
-		); err != nil {
-			return err
-		}
+		fallthrough
 	case gofire.Float32, gofire.Float64:
-		// first emit temp bigger var flag holder into pre parse stage.
-		if _, err := fmt.Fprintf(&d.preParse,
-			`
-				var %s_ %s
-				cli.Flags().%sVarP(&%s_, %q, %q, %f, %q)
-			`,
-			name,
-			t.Type(),
-			strings.Title(t.Type()),
-			name,
-			full,
-			short,
-			val,
-			doc,
-		); err != nil {
-			return err
-		}
-		// second emit type cast to real flag type into post parse stage.
-		if _, err := fmt.Fprintf(
-			&d.postParse,
-			`
-				%s = %s%s_
-			`,
-			name,
-			amp,
-			name,
-		); err != nil {
-			return err
-		}
+		fallthrough
 	case gofire.String:
 		if _, err := fmt.Fprintf(&d.preParse,
 			`
-				var %s_ string
-				cli.Flags().StringVarP(&%s_, %q, %q, %q, %q)
+				var %s_ %s
+				cli.Flags().%sVarP(&%s_, %q, %q, %s, %q)
 			`,
 			name,
+			t.Type(),
+			strings.Title(t.Type()),
 			name,
 			full,
 			short,
-			val,
+			t.Format(val),
 			doc,
 		); err != nil {
 			return err
 		}
-		// second emit type cast to real flag type into post parse stage.
 		if _, err := fmt.Fprintf(
 			&d.postParse,
 			`
@@ -685,9 +498,9 @@ func (d *driver) flag(name, full, short string, t gofire.Typ, ptr bool, val inte
 		}
 		return nil
 	}
-	u := fmt.Sprintf(`--%s=%s`, full, t.Format(val))
+	u := fmt.Sprintf("--%s=%s", full, t.Format(val))
 	if short != "" {
-		u += " " + fmt.Sprintf(`-%s=%s`, short, t.Format(val))
+		u += " " + fmt.Sprintf("-%s=%s", short, t.Format(val))
 	}
 	d.usageList = append(d.usageList, u)
 	return nil

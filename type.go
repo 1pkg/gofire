@@ -2,7 +2,6 @@ package gofire
 
 import (
 	"fmt"
-	"math"
 	"strings"
 )
 
@@ -142,56 +141,6 @@ func (k Kind) Base() int16 {
 		return 128
 	default:
 		return 0
-	}
-}
-
-func (k Kind) Max() interface{} {
-	switch k {
-	case Int:
-		return int(^uint(0) >> 1)
-	case Int8:
-		return math.MaxInt8
-	case Int16:
-		return math.MaxInt16
-	case Int32:
-		return math.MaxInt32
-	case Int64:
-		return math.MaxInt64
-	case Uint:
-		return ^uint(0)
-	case Uint8:
-		return math.MaxUint8
-	case Uint16:
-		return math.MaxUint16
-	case Uint32:
-		return math.MaxUint32
-	case Uint64:
-		return uint64(math.MaxUint64)
-	// for all the rest numeric type, probably,
-	// it's unresonable to check for overflows anyway.
-	default:
-		return nil
-	}
-}
-
-func (k Kind) Min() interface{} {
-	switch k {
-	case Int:
-		return -int(^uint(0)>>1) - 1
-	case Int8:
-		return math.MinInt8
-	case Int16:
-		return math.MinInt16
-	case Int32:
-		return math.MinInt32
-	case Int64:
-		return math.MinInt64
-	case Uint, Uint8, Uint16, Uint32, Uint64:
-		return 0
-	// For all the rest numeric type, probably,
-	// it's unresonable to check for overflows anyway.
-	default:
-		return nil
 	}
 }
 
