@@ -172,6 +172,11 @@ func TestParseTypeValue(t *testing.T) {
 			val: "",
 			out: []interface{}{},
 		},
+		"string slice nil value should be parsed as an nil slice value": {
+			typ: gofire.TSlice{ETyp: gofire.TPrimitive{TKind: gofire.String}},
+			val: "nil",
+			out: nil,
+		},
 		"string slice empty slice value should be parsed as an empty slice value": {
 			typ: gofire.TSlice{ETyp: gofire.TPrimitive{TKind: gofire.String}},
 			val: "{}",
@@ -241,6 +246,11 @@ func TestParseTypeValue(t *testing.T) {
 			val: "{}",
 			out: []interface{}{},
 		},
+		"int array type nil value should produce expected error": {
+			typ: gofire.TArray{ETyp: gofire.TPrimitive{TKind: gofire.Int32}, Size: 0},
+			val: "nil",
+			err: errors.New(`invalid value "nil" can't be parsed as an array or a slice`),
+		},
 		"int array type mixed slice value should fail on parse": {
 			typ: gofire.TArray{ETyp: gofire.TPrimitive{TKind: gofire.Int32}, Size: 2},
 			val: `{ 10, val }`,
@@ -261,6 +271,11 @@ func TestParseTypeValue(t *testing.T) {
 			typ: gofire.TMap{KTyp: gofire.TPrimitive{TKind: gofire.String}, VTyp: gofire.TPrimitive{TKind: gofire.Uint}},
 			val: "",
 			out: map[interface{}]interface{}{},
+		},
+		"map string:uint type nil value should be parsed as an nil map valuer": {
+			typ: gofire.TMap{KTyp: gofire.TPrimitive{TKind: gofire.String}, VTyp: gofire.TPrimitive{TKind: gofire.Uint}},
+			val: "nil 	",
+			out: nil,
 		},
 		"map string:uint type empty map value should be parsed as an empty map value": {
 			typ: gofire.TMap{KTyp: gofire.TPrimitive{TKind: gofire.String}, VTyp: gofire.TPrimitive{TKind: gofire.Uint}},

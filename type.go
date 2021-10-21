@@ -237,7 +237,7 @@ func (t TMap) Type() string {
 func (t TMap) Format(v interface{}) string {
 	vs := v.(map[interface{}]interface{})
 	fmts := make([]string, 0, len(vs))
-	for k, v := range v.([]interface{}) {
+	for k, v := range v.(map[interface{}]interface{}) {
 		kv := fmt.Sprintf("%s:%s", t.KTyp.Format(k), t.VTyp.Format(v))
 		fmts = append(fmts, kv)
 	}

@@ -31,10 +31,7 @@ func (d *driver) Reset() error {
 	if err := d.include("tokenize.go"); err != nil {
 		return err
 	}
-	if _, err := d.WriteString("args, flags, err := tokenize(os.Args)"); err != nil {
-		return err
-	}
-	if err := d.include("parsetv.go"); err != nil {
+	if _, err := d.WriteString("args, flags, err := tokenize(os.Args[1:]);"); err != nil {
 		return err
 	}
 	return nil
@@ -57,78 +54,119 @@ func (d driver) Imports() []string {
 func (d *driver) VisitArgument(a gofire.Argument) error {
 	_ = d.Driver.VisitArgument(a)
 	p := d.Last()
-	return d.visit(p.Name, p.Name, p.Type, false, "", fmt.Sprintf("args[%d]", a.Index))
+	if a.Ellipsis {
+		return fmt.Errorf(
+			"driver %s: ellipsis argument types are not supported, got an argument %s %s",
+			generators.DriverNameGofire,
+			p.Name,
+			a.Type.Type(),
+		)
+	}
+	switch p.Type.Kind() {
+	case gofire.Bool:
+	case gofire.Int, gofire.Int8, gofire.Int16, gofire.Int32, gofire.Int64:
+	case gofire.Uint, gofire.Uint8, gofire.Uint16, gofire.Uint32, gofire.Uint64:
+	case gofire.Float32, gofire.Float64:
+	case gofire.Complex64, gofire.Complex128:
+	case gofire.String:
+	case gofire.Array:
+	case gofire.Slice:
+	case gofire.Map:
+	default:
+		return fmt.Errorf(
+			"driver %s: argument type %s is not supported for an argument %s",
+			generators.DriverNameGofire,
+			p.Type.Type(),
+			p.Name,
+		)
+	}
+	if _, err := fmt.Fprintf(d,
+		`
+			{
+				i := %d
+				if len(args) <= i {
+					return fmt.Errorf("argument %%d-th is required", i)
+				}
+				v, _, err := parsers.ParseTypeValue(%#v, args[i])
+				if err != nil {
+					return fmt.Errorf("argument %s value %%v can't be parsed %%v", args[i], err)
+				}
+				if err := mapstructure.Decode(v, &%s); err != nil {
+					return fmt.Errorf("argument %s value %%v can't be decoded %%v", v, err)
+				}
+			}
+		`,
+		a.Index,
+		p.Type,
+		p.Name,
+		p.Name,
+		p.Name,
+	); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 	_ = d.Driver.VisitFlag(f, g)
 	p := d.Last()
 	typ := p.Type
+	var amp string
 	tprt, ptr := typ.(gofire.TPtr)
 	if ptr {
 		typ = tprt.ETyp
-	}
-	return d.visit(p.Name, p.Full, typ, ptr, f.Default, fmt.Sprintf("flags[%s]", f.Full))
-}
-
-func (d *driver) visit(name, param string, t gofire.Typ, ptr bool, val interface{}, assing string) error {
-	var amp string
-	if ptr {
 		amp = "&"
 	}
-	k := t.Kind()
-	switch k {
+	switch typ.Kind() {
 	case gofire.Bool:
-		fallthrough
 	case gofire.Int, gofire.Int8, gofire.Int16, gofire.Int32, gofire.Int64:
-		fallthrough
 	case gofire.Uint, gofire.Uint8, gofire.Uint16, gofire.Uint32, gofire.Uint64:
-		fallthrough
 	case gofire.Float32, gofire.Float64:
-		fallthrough
 	case gofire.Complex64, gofire.Complex128:
-		fallthrough
 	case gofire.String:
-		fallthrough
 	case gofire.Array:
-		fallthrough
 	case gofire.Slice:
-		fallthrough
 	case gofire.Map:
-		if _, err := fmt.Fprintf(d,
-			`
-				{
-					p := %s
-					v, err := parsetv(%#v, p, %q)
-					if err != nil {
-						return fmt.Errorf("parameter %s value %%s can't be parsed %%v", p, err)
-					}
-					var t %s
-					if err := mapstructure.Decode(v, &t); err != nil {
-						return fmt.Errorf("parameter %s value %%s can't be decoded %%v", p, err)
-					}
-					%s = %st
-				}
-			`,
-			assing,
-			t,
-			val,
-			param,
-			t.Type(),
-			param,
-			name,
-			amp,
-		); err != nil {
-			return err
-		}
-		return nil
 	default:
 		return fmt.Errorf(
-			"type %s is not supported for parameter %s",
-			t.Type(),
-			param,
+			"driver %s: flag type %s is not supported for a flag %s",
+			generators.DriverNameGofire,
+			p.Type.Type(),
+			p.Name,
 		)
 	}
+	if _, err := fmt.Fprintf(d,
+		`
+			{
+				f, ok := flags[%q]
+				v, set, err := parsers.ParseTypeValue(%#v, f)
+				if err != nil {
+					return fmt.Errorf("flag %s value %%v can't be parsed %%v", f, err)
+				}
+				if !ok || !set {
+					t := %s
+					v = %st
+				}
+				var t %s
+				if err := mapstructure.Decode(v, &t); err != nil {
+					return fmt.Errorf("flag %s value %%v can't be decoded %%v", v, err)
+				}
+				%s = %st
+			}
+		`,
+		p.Full,
+		typ,
+		p.Name,
+		typ.Format(f.Default),
+		amp,
+		typ.Type(),
+		p.Name,
+		p.Name,
+		amp,
+	); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (d *driver) include(path string) error {
@@ -143,7 +181,7 @@ func (d *driver) include(path string) error {
 	if err := f.Close(); err != nil {
 		return err
 	}
-	s := strings.SplitN(string(b), "// ---", 2)
+	s := strings.SplitN(string(b), "// #include", 2)
 	if _, err := d.WriteString(s[1]); err != nil {
 		return err
 	}

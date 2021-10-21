@@ -6,7 +6,7 @@ import (
 	"unicode"
 )
 
-// ---
+// #include
 
 var tokenize = func(tokens []string) (args []string, flags map[string]string, err error) {
 	var flname = func(token string) (string, error) {

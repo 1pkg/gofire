@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/1pkg/gofire"
 )
@@ -58,8 +59,18 @@ func ParseTypeValue(t gofire.Typ, val string) (interface{}, bool, error) {
 }
 
 func parseTypeValueRange(t gofire.Typ, size int, val string) (interface{}, bool, error) {
-	if val == "" || val == "{}" {
+	v := strings.Map(func(r rune) rune {
+		if unicode.IsSpace(r) {
+			return -1
+		}
+		return r
+	}, val)
+	if v == "" || v == "{}" {
 		return []interface{}{}, false, nil
+	}
+	// Support special nil case for slices.
+	if size == -1 && v == "nil" {
+		return nil, false, nil
 	}
 	if !strings.HasPrefix(val, "{") || !strings.HasSuffix(val, "}") {
 		return nil, false, fmt.Errorf("invalid value %q can't be parsed as an array or a slice", val)
@@ -89,8 +100,18 @@ func parseTypeValueRange(t gofire.Typ, size int, val string) (interface{}, bool,
 }
 
 func parseTypeValueMap(tk, tv gofire.Typ, val string) (interface{}, bool, error) {
+	v := strings.Map(func(r rune) rune {
+		if unicode.IsSpace(r) {
+			return -1
+		}
+		return r
+	}, val)
 	if val == "" || val == "{}" {
 		return map[interface{}]interface{}{}, false, nil
+	}
+	// Support special nil case.
+	if v == "nil" {
+		return nil, false, nil
 	}
 	if !strings.HasPrefix(val, "{") || !strings.HasSuffix(val, "}") {
 		return nil, false, fmt.Errorf("invalid value %q can't be parsed as a map", val)
