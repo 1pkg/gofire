@@ -1,13 +1,19 @@
 package gofire
 
-import "github.com/1pkg/gofire"
+import (
+	"github.com/1pkg/gofire"
+	"github.com/1pkg/gofire/parsers"
+)
 
 // ---
 
-var parsetv = func(t gofire.Typ, val string, def string) (interface{}, error) {
-	v, err := gofire.ParseTypeValue(t, val)
+var parsetv = func(t gofire.Typ, val string, def interface{}) (interface{}, error) {
+	v, set, err := parsers.ParseTypeValue(t, val)
 	if err != nil {
-		return gofire.ParseTypeValue(t, def)
+		return nil, err
 	}
-	return v, nil
+	if set {
+		return v, nil
+	}
+	return def, nil
 }

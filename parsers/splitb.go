@@ -1,9 +1,9 @@
-package gofire
+package parsers
 
 import "strings"
 
-// Splitb splits the provided string tokens based on balanced char sequences.
-func Splitb(s string, by string, bcs ...string) []string {
+// splitb splits the provided string tokens based on balanced char sequences.
+func splitb(s string, by string, bcs ...string) []string {
 	tokens := strings.Split(s, by)
 	var accum string
 	result := make([]string, 0, len(tokens))

@@ -45,7 +45,7 @@ func TestCobraDriver(t *testing.T) {
 			function: "echo",
 			params:   []string{"--help"},
 			out: `echo: echo documentation string.
-Usage: echo --a="" --b=0 --c=0 --d=false --e=0.0 arg0 arg1 arg2 arg3 arg4
+Usage: echo --a="" --b=0 --c=0 --d=false --e=0.000000 arg0 arg1 arg2 arg3 arg4
 Flags: --a string --b int --c uint --d --e float32 -h, --help help for echo
 `,
 		},
@@ -56,7 +56,7 @@ Flags: --a string --b int --c uint --d --e float32 -h, --help help for echo
 			params:   []string{"--e", "test"},
 			err:      errors.New("exit status 1"),
 			out: `Error: invalid argument "test" for "--e" flag: strconv.ParseFloat: parsing "test": invalid syntax
-Usage: echo --a="" --b=0 --c=0 --d=false --e=0.0 arg0 arg1 arg2 arg3 arg4
+Usage: echo --a="" --b=0 --c=0 --d=false --e=0.000000 arg0 arg1 arg2 arg3 arg4
 Flags: --a string --b int --c uint --d --e float32 -h, --help help for echo
 invalid argument "test" for "--e" flag: strconv.ParseFloat: parsing "test": invalid syntax
 exit status 2
@@ -69,7 +69,7 @@ exit status 2
 			params:   []string{"--a=test", "--b", "100", "--c", "10", "--d=true", "--e", "10.125", "test1"},
 			err:      errors.New("exit status 1"),
 			out: `Error: requires at least 5 arg(s), only received 1
-Usage: echo --a="" --b=0 --c=0 --d=false --e=0.0 arg0 arg1 arg2 arg3 arg4
+Usage: echo --a="" --b=0 --c=0 --d=false --e=0.000000 arg0 arg1 arg2 arg3 arg4
 Flags: --a string --b int --c uint --d --e float32 -h, --help help for echo
 requires at least 5 arg(s), only received 1
 exit status 2

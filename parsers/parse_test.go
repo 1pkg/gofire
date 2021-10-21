@@ -169,8 +169,8 @@ func TestParse(t *testing.T) {
 					gofire.Argument{Index: 0, Type: gofire.TPrimitive{TKind: gofire.Int8}},
 					gofire.Placeholder{Type: gofire.TPrimitive{TKind: gofire.Uint}},
 					gofire.Flag{Full: "b", Default: "", Type: gofire.TPtr{ETyp: gofire.TPrimitive{TKind: gofire.String}}},
-					gofire.Flag{Full: "c", Default: "0.0", Type: gofire.TPtr{ETyp: gofire.TPrimitive{TKind: gofire.Float32}}},
-					gofire.Flag{Full: "d", Default: "0.0", Type: gofire.TPtr{ETyp: gofire.TPrimitive{TKind: gofire.Float64}}},
+					gofire.Flag{Full: "c", Default: float64(0.0), Type: gofire.TPtr{ETyp: gofire.TPrimitive{TKind: gofire.Float32}}},
+					gofire.Flag{Full: "d", Default: float64(0.0), Type: gofire.TPtr{ETyp: gofire.TPrimitive{TKind: gofire.Float64}}},
 				},
 				Results: []string{"int"},
 			},
@@ -203,8 +203,8 @@ func TestParse(t *testing.T) {
 					gofire.Argument{Index: 0, Type: gofire.TPrimitive{TKind: gofire.Int8}},
 					gofire.Placeholder{Type: gofire.TPrimitive{TKind: gofire.Uint}},
 					gofire.Flag{Full: "b", Default: "", Type: gofire.TPtr{ETyp: gofire.TPrimitive{TKind: gofire.String}}},
-					gofire.Flag{Full: "c", Default: "0.0", Type: gofire.TPtr{ETyp: gofire.TPrimitive{TKind: gofire.Float32}}},
-					gofire.Flag{Full: "d", Default: "0.0", Type: gofire.TPtr{ETyp: gofire.TPrimitive{TKind: gofire.Float64}}},
+					gofire.Flag{Full: "c", Default: float64(0.0), Type: gofire.TPtr{ETyp: gofire.TPrimitive{TKind: gofire.Float32}}},
+					gofire.Flag{Full: "d", Default: float64(0.0), Type: gofire.TPtr{ETyp: gofire.TPrimitive{TKind: gofire.Float64}}},
 					gofire.Argument{Index: 1, Ellipsis: true, Type: gofire.TPrimitive{TKind: gofire.Int}},
 				},
 				Results: []string{"int"},
@@ -238,8 +238,8 @@ func TestParse(t *testing.T) {
 					gofire.Argument{Index: 0, Type: gofire.TPrimitive{TKind: gofire.Int8}},
 					gofire.Placeholder{Type: gofire.TPrimitive{TKind: gofire.Uint}},
 					gofire.Flag{Full: "b", Default: "", Type: gofire.TPtr{ETyp: gofire.TPrimitive{TKind: gofire.String}}},
-					gofire.Flag{Full: "c", Default: "0.0", Type: gofire.TPtr{ETyp: gofire.TPrimitive{TKind: gofire.Float32}}},
-					gofire.Flag{Full: "d", Default: "0.0", Type: gofire.TPtr{ETyp: gofire.TPrimitive{TKind: gofire.Float64}}},
+					gofire.Flag{Full: "c", Default: float64(0.0), Type: gofire.TPtr{ETyp: gofire.TPrimitive{TKind: gofire.Float32}}},
+					gofire.Flag{Full: "d", Default: float64(0.0), Type: gofire.TPtr{ETyp: gofire.TPrimitive{TKind: gofire.Float64}}},
 					gofire.Placeholder{Type: gofire.TPrimitive{TKind: gofire.Int}},
 				},
 				Results: []string{"int"},
@@ -273,9 +273,9 @@ func TestParse(t *testing.T) {
 					gofire.Argument{Index: 0, Type: gofire.TPrimitive{TKind: gofire.Int8}},
 					gofire.Placeholder{Type: gofire.TPrimitive{TKind: gofire.Uint}},
 					gofire.Flag{Full: "b", Default: "", Type: gofire.TPtr{ETyp: gofire.TPrimitive{TKind: gofire.String}}},
-					gofire.Flag{Full: "c", Default: "0.0", Type: gofire.TPtr{ETyp: gofire.TPrimitive{TKind: gofire.Float32}}},
-					gofire.Flag{Full: "d", Default: "0.0", Type: gofire.TPtr{ETyp: gofire.TPrimitive{TKind: gofire.Float64}}},
-					gofire.Flag{Full: "f", Default: "0", Type: gofire.TPtr{ETyp: gofire.TPrimitive{TKind: gofire.Int}}},
+					gofire.Flag{Full: "c", Default: float64(0.0), Type: gofire.TPtr{ETyp: gofire.TPrimitive{TKind: gofire.Float32}}},
+					gofire.Flag{Full: "d", Default: float64(0.0), Type: gofire.TPtr{ETyp: gofire.TPrimitive{TKind: gofire.Float64}}},
+					gofire.Flag{Full: "f", Default: int64(0), Type: gofire.TPtr{ETyp: gofire.TPrimitive{TKind: gofire.Int}}},
 				},
 				Results: []string{"int"},
 			},
@@ -410,9 +410,9 @@ func TestParse(t *testing.T) {
 						Name: "cz",
 						Doc:  "z a flag group",
 						Flags: []gofire.Flag{
-							{Full: "a", Default: "nil", Type: gofire.TPtr{ETyp: gofire.TPrimitive{TKind: gofire.String}}},
-							{Full: "b", Doc: "b flag boolean", Default: "false", Type: gofire.TPrimitive{TKind: gofire.Bool}},
-							{Full: "complex", Default: "{}", Type: gofire.TMap{KTyp: gofire.TPrimitive{TKind: gofire.String}, VTyp: gofire.TPrimitive{TKind: gofire.Int}}},
+							{Full: "a", Default: nil, Type: gofire.TPtr{ETyp: gofire.TPrimitive{TKind: gofire.String}}},
+							{Full: "b", Doc: "b flag boolean", Default: false, Type: gofire.TPrimitive{TKind: gofire.Bool}},
+							{Full: "complex", Default: map[interface{}]interface{}{}, Type: gofire.TMap{KTyp: gofire.TPrimitive{TKind: gofire.String}, VTyp: gofire.TPrimitive{TKind: gofire.Int}}},
 						},
 						Type: gofire.TStruct{Typ: "z"},
 					},
@@ -493,9 +493,9 @@ func TestParse(t *testing.T) {
 						Flags: []gofire.Flag{
 							{Full: "a", Deprecated: true, Default: "str", Type: gofire.TPrimitive{TKind: gofire.String}},
 							{Full: "b", Deprecated: true, Default: "str", Type: gofire.TPrimitive{TKind: gofire.String}},
-							{Full: "long", Short: "l", Hidden: true, Type: gofire.TPrimitive{TKind: gofire.Complex128}},
-							{Full: "c", Default: "0", Type: gofire.TPrimitive{TKind: gofire.Complex64}},
-							{Full: "d", Default: "nil", Type: gofire.TPtr{ETyp: gofire.TPrimitive{TKind: gofire.Uint8}}},
+							{Full: "long", Short: "l", Hidden: true, Default: complex128(0.0), Type: gofire.TPrimitive{TKind: gofire.Complex128}},
+							{Full: "c", Default: complex128(0.0), Type: gofire.TPrimitive{TKind: gofire.Complex64}},
+							{Full: "d", Default: nil, Type: gofire.TPtr{ETyp: gofire.TPrimitive{TKind: gofire.Uint8}}},
 						},
 						Type: gofire.TStruct{Typ: "z"},
 					},
@@ -534,45 +534,7 @@ func TestParse(t *testing.T) {
 					gofire.Group{
 						Name: "cz",
 						Flags: []gofire.Flag{
-							{Full: "long", Short: "test", Default: `{ "zzzz":{1,2,3}, ddd : { 2, }}`, Type: gofire.TMap{KTyp: gofire.TPrimitive{TKind: gofire.String}, VTyp: gofire.TSlice{ETyp: gofire.TPrimitive{TKind: gofire.Int}}}},
-						},
-						Type: gofire.TStruct{Typ: "z"},
-					},
-				},
-			},
-		},
-		"valid go package with valid function definition and group complex data tag with delimeters reference with tags should produce expected command": {
-			ctx: context.TODO(),
-			dir: fstest.MapFS{
-				"file.go": {
-					Data: escape(`
-						package foo
-
-						func bar(cz z) {
-						}
-					`),
-				},
-				"struct.go": {
-					Data: escape(`
-						package foo
-
-						type z struct {
-							long map[string][]int # json:"long"  gofire:"default = {'zzzz: zzzz':{1,2,3}, 'ddd,,,':{}}"#
-						}
-					`),
-				},
-			},
-			pckg:     "foo",
-			function: "bar",
-			cmd: &gofire.Command{
-				Package:    "foo",
-				Function:   "bar",
-				Definition: "func bar(cz z)",
-				Parameters: []gofire.Parameter{
-					gofire.Group{
-						Name: "cz",
-						Flags: []gofire.Flag{
-							{Full: "long", Short: "test", Default: `{"zzzz: zzzz":{1,2,3}, "ddd,,,":{}}`, Type: gofire.TMap{KTyp: gofire.TPrimitive{TKind: gofire.String}, VTyp: gofire.TSlice{ETyp: gofire.TPrimitive{TKind: gofire.Int}}}},
+							{Full: "long", Short: "test", Default: map[interface{}]interface{}{"zzzz": []interface{}{int64(1), int64(2), int64(3)}, "ddd": []interface{}{int64(2)}}, Type: gofire.TMap{KTyp: gofire.TPrimitive{TKind: gofire.String}, VTyp: gofire.TSlice{ETyp: gofire.TPrimitive{TKind: gofire.Int}}}},
 						},
 						Type: gofire.TStruct{Typ: "z"},
 					},

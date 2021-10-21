@@ -3,6 +3,7 @@ package gofire
 import (
 	"fmt"
 	"math"
+	"strings"
 )
 
 type Kind uint8
@@ -86,24 +87,26 @@ func (k Kind) Type() string {
 	}
 }
 
-func (k Kind) Default() string {
+func (k Kind) Default() interface{} {
 	switch k {
 	case Bool:
-		return "false"
+		return false
 	case Int, Int8, Int16, Int32, Int64:
-		return "0"
+		return int64(0)
 	case Uint, Uint8, Uint16, Uint32, Uint64:
-		return "0"
+		return uint64(0)
 	case Float32, Float64:
-		return "0.0"
+		return float64(0.0)
 	case Complex64, Complex128:
-		return "0"
+		return complex128(0.0)
 	case String:
 		return ""
-	case Array, Slice, Map:
-		return "{}"
+	case Array, Slice:
+		return []interface{}{}
+	case Map:
+		return map[interface{}]interface{}{}
 	default:
-		return "nil"
+		return nil
 	}
 }
 
@@ -195,6 +198,7 @@ func (k Kind) Min() interface{} {
 type Typ interface {
 	Kind() Kind
 	Type() string
+	Format(interface{}) string
 }
 
 type TPrimitive struct {
@@ -207,6 +211,23 @@ func (t TPrimitive) Kind() Kind {
 
 func (t TPrimitive) Type() string {
 	return t.TKind.Type()
+}
+
+func (t TPrimitive) Format(v interface{}) string {
+	switch t.TKind {
+	case Bool:
+		return fmt.Sprintf("%t", v)
+	case Int, Int8, Int16, Int32, Int64:
+		return fmt.Sprintf("%d", v)
+	case Uint, Uint8, Uint16, Uint32, Uint64:
+		return fmt.Sprintf("%d", v)
+	case Float32, Float64:
+		return fmt.Sprintf("%f", v)
+	case String:
+		return fmt.Sprintf("%q", v)
+	default:
+		return fmt.Sprintf("%v", v)
+	}
 }
 
 type TArray struct {
@@ -222,6 +243,15 @@ func (t TArray) Type() string {
 	return fmt.Sprintf("[%d]%s", t.Size, t.ETyp.Type())
 }
 
+func (t TArray) Format(v interface{}) string {
+	vs := v.([]interface{})
+	fmts := make([]string, 0, len(vs))
+	for _, v := range v.([]interface{}) {
+		fmts = append(fmts, t.ETyp.Format(v))
+	}
+	return fmt.Sprintf("%s{%s}", t.Type(), strings.Join(fmts, ","))
+}
+
 type TSlice struct {
 	ETyp Typ
 }
@@ -232,6 +262,15 @@ func (TSlice) Kind() Kind {
 
 func (t TSlice) Type() string {
 	return fmt.Sprintf("[]%s", t.ETyp.Type())
+}
+
+func (t TSlice) Format(v interface{}) string {
+	vs := v.([]interface{})
+	fmts := make([]string, 0, len(vs))
+	for _, v := range v.([]interface{}) {
+		fmts = append(fmts, t.ETyp.Format(v))
+	}
+	return fmt.Sprintf("%s{%s}", t.Type(), strings.Join(fmts, ","))
 }
 
 type TMap struct {
@@ -246,6 +285,16 @@ func (t TMap) Type() string {
 	return fmt.Sprintf("map[%s]%s", t.KTyp.Type(), t.VTyp.Type())
 }
 
+func (t TMap) Format(v interface{}) string {
+	vs := v.(map[interface{}]interface{})
+	fmts := make([]string, 0, len(vs))
+	for k, v := range v.([]interface{}) {
+		kv := fmt.Sprintf("%s:%s", t.KTyp.Format(k), t.VTyp.Format(v))
+		fmts = append(fmts, kv)
+	}
+	return fmt.Sprintf("%s{%s}", t.Type(), strings.Join(fmts, ","))
+}
+
 type TPtr struct {
 	ETyp Typ
 }
@@ -258,6 +307,10 @@ func (t TPtr) Type() string {
 	return fmt.Sprintf("*%s", t.ETyp.Type())
 }
 
+func (t TPtr) Format(v interface{}) string {
+	return "nil"
+}
+
 type TStruct struct {
 	Typ string
 }
@@ -268,4 +321,8 @@ func (TStruct) Kind() Kind {
 
 func (t TStruct) Type() string {
 	return t.Typ
+}
+
+func (t TStruct) Format(v interface{}) string {
+	return fmt.Sprintf("%s{}", t.Typ)
 }

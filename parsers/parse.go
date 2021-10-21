@@ -250,7 +250,7 @@ func (p *parser) register(f file, gendecl *ast.GenDecl, tspec *ast.TypeSpec) err
 		if field.Tag != nil {
 			tag = field.Tag.Value
 		}
-		flag, set, err := p.tagflag(tag)
+		flag, set, err := p.tagflag(typ, tag)
 		if err != nil {
 			return fmt.Errorf(
 				"field %s tag can't be parsed, %w",
@@ -381,23 +381,21 @@ func (p parser) typ(tp ast.Expr) (gofire.Typ, error) {
 	}
 }
 
-// ! Note that some delimeters used in Splitb ('{', '}', '"')
-// ! inside default tag value might still break the parser.
-// ! Current tag value parser may need to be revisited in future.
-func (p parser) tagflag(rawTag string) (*gofire.Flag, bool, error) {
+func (p parser) tagflag(typ gofire.Typ, rawTag string) (*gofire.Flag, bool, error) {
 	var f gofire.Flag
+	var set bool
 	// Skip empty tags they will be transformed into auto flags.
 	if rawTag == "" {
 		return &f, false, nil
 	}
 	rawTag = strings.Trim(rawTag, "`")
-	tags := gofire.Splitb(rawTag, " ", `"`)
+	tags := splitb(rawTag, " ", `"`)
 	for _, ftag := range tags {
 		parts := strings.SplitN(ftag, ":", 2)
 		if len(parts) != 2 || parts[0] != "gofire" {
 			continue
 		}
-		tags := gofire.Splitb(strings.Trim(parts[1], `"`), ",", "{", "}")
+		tags := splitb(strings.Trim(parts[1], `"`), ",", "{", "}")
 		// Skip omitted tags they will be transformed into auto flags.
 		if len(tags) == 1 && strings.TrimSpace(tags[0]) == "-" {
 			return &f, false, nil
@@ -456,14 +454,24 @@ func (p parser) tagflag(rawTag string) (*gofire.Flag, bool, error) {
 			case "short":
 				f.Short = val.(string)
 			case "default":
-				f.Default = val.(string)
+				v, pset, err := ParseTypeValue(typ, val.(string))
+				if err != nil {
+					return nil, false, fmt.Errorf(
+						"can't parse tag %s value %v in %s",
+						tag,
+						err,
+						rawTag,
+					)
+				}
+				set = pset
+				f.Default = v
 			case "deprecated":
 				f.Deprecated = val.(bool)
 			case "hidden":
 				f.Hidden = val.(bool)
 			}
 		}
-		return &f, true, nil
+		return &f, set, nil
 	}
 	return &f, false, nil
 }

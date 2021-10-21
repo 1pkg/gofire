@@ -49,6 +49,7 @@ func (d driver) Imports() []string {
 		`"unicode"`,
 		`"os"`,
 		`"github.com/1pkg/gofire"`,
+		`"github.com/1pkg/gofire/parsers"`,
 		`"github.com/mitchellh/mapstructure"`,
 	}
 }
@@ -70,7 +71,7 @@ func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 	return d.visit(p.Name, p.Full, typ, ptr, f.Default, fmt.Sprintf("flags[%s]", f.Full))
 }
 
-func (d *driver) visit(name, param string, t gofire.Typ, ptr bool, val string, assing string) error {
+func (d *driver) visit(name, param string, t gofire.Typ, ptr bool, val interface{}, assing string) error {
 	var amp string
 	if ptr {
 		amp = "&"

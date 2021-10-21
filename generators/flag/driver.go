@@ -357,7 +357,7 @@ func (d *driver) argument(name string, index uint64, t gofire.TPrimitive, ellips
 	return nil
 }
 
-func (d *driver) flag(name string, flag string, t gofire.TPrimitive, ptr bool, val string, doc string) error {
+func (d *driver) flag(name string, flag string, t gofire.TPrimitive, ptr bool, val interface{}, doc string) error {
 	k := t.Kind()
 	var amp string
 	if ptr {
@@ -365,24 +365,15 @@ func (d *driver) flag(name string, flag string, t gofire.TPrimitive, ptr bool, v
 	}
 	switch k {
 	case gofire.Bool:
-		v, err := gofire.ParseTypeValue(t, val)
-		if err != nil || v == nil {
-			return fmt.Errorf(
-				"can't parse default value for a flag %s type %s: %w",
-				flag,
-				t.Type(),
-				err,
-			)
-		}
 		if _, err := fmt.Fprintf(&d.preParse,
 			`
 				var %s_ bool
-				flag.BoolVar(&%s_, %q, %t, %q)
+				flag.BoolVar(&%s_, %q, %s, %q)
 			`,
 			name,
 			name,
 			flag,
-			v,
+			t.Format(val),
 			doc,
 		); err != nil {
 			return err
@@ -400,25 +391,16 @@ func (d *driver) flag(name string, flag string, t gofire.TPrimitive, ptr bool, v
 			return err
 		}
 	case gofire.Int, gofire.Int8, gofire.Int16, gofire.Int32, gofire.Int64:
-		v, err := gofire.ParseTypeValue(t, val)
-		if err != nil || v == nil {
-			return fmt.Errorf(
-				"can't parse default value for a flag %s type %s: %w",
-				flag,
-				t.Type(),
-				err,
-			)
-		}
 		// first emit temp bigger var flag holder into pre parse stage.
 		if _, err := fmt.Fprintf(&d.preParse,
 			`
 				var %s_ int64
-				flag.Int64Var(&%s_, %q, %d, %q)
+				flag.Int64Var(&%s_, %q, %s, %q)
 			`,
 			name,
 			name,
 			flag,
-			v,
+			t.Format(val),
 			doc,
 		); err != nil {
 			return err
@@ -450,25 +432,16 @@ func (d *driver) flag(name string, flag string, t gofire.TPrimitive, ptr bool, v
 			return err
 		}
 	case gofire.Uint, gofire.Uint8, gofire.Uint16, gofire.Uint32, gofire.Uint64:
-		v, err := gofire.ParseTypeValue(t, val)
-		if err != nil || v == nil {
-			return fmt.Errorf(
-				"can't parse default value for a flag %s type %s: %w",
-				flag,
-				t.Type(),
-				err,
-			)
-		}
 		// first emit temp bigger var flag holder into pre parse stage.
 		if _, err := fmt.Fprintf(&d.preParse,
 			`
 				var %s_ uint64
-				flag.Uint64Var(&%s_, %q, %d, %q)
+				flag.Uint64Var(&%s_, %q, %s, %q)
 			`,
 			name,
 			name,
 			flag,
-			v,
+			t.Format(val),
 			doc,
 		); err != nil {
 			return err
@@ -500,25 +473,16 @@ func (d *driver) flag(name string, flag string, t gofire.TPrimitive, ptr bool, v
 			return err
 		}
 	case gofire.Float32, gofire.Float64:
-		v, err := gofire.ParseTypeValue(t, val)
-		if err != nil || v == nil {
-			return fmt.Errorf(
-				"can't parse default value for a flag %s type %s: %w",
-				flag,
-				t.Type(),
-				err,
-			)
-		}
 		// first emit temp bigger var flag holder into pre parse stage.
 		if _, err := fmt.Fprintf(&d.preParse,
 			`
 				var %s_ float64
-				flag.Float64Var(&%s_, %q, %f, %q)
+				flag.Float64Var(&%s_, %q, %s, %q)
 			`,
 			name,
 			name,
 			flag,
-			v,
+			t.Format(val),
 			doc,
 		); err != nil {
 			return err
@@ -541,24 +505,15 @@ func (d *driver) flag(name string, flag string, t gofire.TPrimitive, ptr bool, v
 			return err
 		}
 	case gofire.String:
-		v, err := gofire.ParseTypeValue(t, val)
-		if err != nil || v == nil {
-			return fmt.Errorf(
-				"can't parse default value for a flag %s type %s: %w",
-				flag,
-				t.Type(),
-				err,
-			)
-		}
 		if _, err := fmt.Fprintf(&d.preParse,
 			`
 				var %s_ string
-				flag.StringVar(&%s_, %q, %q, %q)
+				flag.StringVar(&%s_, %q, %s, %q)
 			`,
 			name,
 			name,
 			flag,
-			v,
+			t.Format(val),
 			doc,
 		); err != nil {
 			return err
@@ -582,10 +537,7 @@ func (d *driver) flag(name string, flag string, t gofire.TPrimitive, ptr bool, v
 			flag,
 		)
 	}
-	if val == "" {
-		val = `""`
-	}
-	d.usageList = append(d.usageList, fmt.Sprintf(`-%s=%v`, flag, val))
-	d.printList = append(d.printList, fmt.Sprintf("-%s %s %s (default %v)", flag, t.Type(), doc, val))
+	d.usageList = append(d.usageList, fmt.Sprintf(`-%s=%s`, flag, t.Format(val)))
+	d.printList = append(d.printList, fmt.Sprintf("-%s %s %s (default %s)", flag, t.Type(), doc, t.Format(val)))
 	return nil
 }

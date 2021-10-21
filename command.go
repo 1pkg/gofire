@@ -34,7 +34,7 @@ type Flag struct {
 	Doc        string
 	Deprecated bool
 	Hidden     bool
-	Default    string
+	Default    interface{}
 	Type       Typ
 }
 

@@ -44,8 +44,8 @@ func TestPFlagDriver(t *testing.T) {
 			params:   []string{"--help"},
 			err:      errors.New("exit status 1"),
 			out: `echo documentation string.
-echo --a="" --b=0 --c=0 --d=false --e=0.0 arg0 arg1 arg2 arg3 arg4 [--help -h]
-func echo(_ context.Context, a *string, b *int, c *uint64, d *bool, e *float32, a1 string, b1 int, c1 uint64, d1 bool, e1 float32) int, --a string (default "") --b int (default 0) --c uint64 (default 0) --d bool (default false) --e float32 (default 0.0) arg 0 string arg 1 int arg 2 uint64 arg 3 bool arg 4 float32
+echo --a="" --b=0 --c=0 --d=false --e=0.000000 arg0 arg1 arg2 arg3 arg4 [--help -h]
+func echo(_ context.Context, a *string, b *int, c *uint64, d *bool, e *float32, a1 string, b1 int, c1 uint64, d1 bool, e1 float32) int, --a string (default "") --b int (default 0) --c uint64 (default 0) --d bool (default false) --e float32 (default 0.000000) arg 0 string arg 1 int arg 2 uint64 arg 3 bool arg 4 float32
 pflag: help requested
 exit status 2
 `,
@@ -58,8 +58,8 @@ exit status 2
 			err:      errors.New("exit status 1"),
 			out: `invalid argument "test" for "--e" flag: strconv.ParseFloat: parsing "test": invalid syntax
 echo documentation string.
-echo --a="" --b=0 --c=0 --d=false --e=0.0 arg0 arg1 arg2 arg3 arg4 [--help -h]
-func echo(_ context.Context, a *string, b *int, c *uint64, d *bool, e *float32, a1 string, b1 int, c1 uint64, d1 bool, e1 float32) int, --a string (default "") --b int (default 0) --c uint64 (default 0) --d bool (default false) --e float32 (default 0.0) arg 0 string arg 1 int arg 2 uint64 arg 3 bool arg 4 float32
+echo --a="" --b=0 --c=0 --d=false --e=0.000000 arg0 arg1 arg2 arg3 arg4 [--help -h]
+func echo(_ context.Context, a *string, b *int, c *uint64, d *bool, e *float32, a1 string, b1 int, c1 uint64, d1 bool, e1 float32) int, --a string (default "") --b int (default 0) --c uint64 (default 0) --d bool (default false) --e float32 (default 0.000000) arg 0 string arg 1 int arg 2 uint64 arg 3 bool arg 4 float32
 invalid argument "test" for "--e" flag: strconv.ParseFloat: parsing "test": invalid syntax
 exit status 2
 `,
@@ -71,8 +71,8 @@ exit status 2
 			params:   []string{"--a=test", "--b", "100", "--c", "10", "--d=true", "--e", "10.125", "test1"},
 			err:      errors.New("exit status 1"),
 			out: `echo documentation string.
-echo --a="" --b=0 --c=0 --d=false --e=0.0 arg0 arg1 arg2 arg3 arg4 [--help -h]
-func echo(_ context.Context, a *string, b *int, c *uint64, d *bool, e *float32, a1 string, b1 int, c1 uint64, d1 bool, e1 float32) int, --a string (default "") --b int (default 0) --c uint64 (default 0) --d bool (default false) --e float32 (default 0.0) arg 0 string arg 1 int arg 2 uint64 arg 3 bool arg 4 float32
+echo --a="" --b=0 --c=0 --d=false --e=0.000000 arg0 arg1 arg2 arg3 arg4 [--help -h]
+func echo(_ context.Context, a *string, b *int, c *uint64, d *bool, e *float32, a1 string, b1 int, c1 uint64, d1 bool, e1 float32) int, --a string (default "") --b int (default 0) --c uint64 (default 0) --d bool (default false) --e float32 (default 0.000000) arg 0 string arg 1 int arg 2 uint64 arg 3 bool arg 4 float32
 argument 1-th is required
 exit status 2
 `,
