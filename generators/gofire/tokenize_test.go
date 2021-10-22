@@ -40,7 +40,7 @@ func TestTokenize(t *testing.T) {
 				"az":  "az-bd",
 			},
 		},
-		"mixture of valid params tokens at the beggining should return expected result": {
+		"mixture of valid params tokens at the beginning should return expected result": {
 			tokens: []string{"100", `"zzz"`, "true", "--dd=aaaa", "--fff", "20.20", "--az", "az-bd"},
 			args:   []string{"100", `"zzz"`, "true"},
 			flags: map[string]string{

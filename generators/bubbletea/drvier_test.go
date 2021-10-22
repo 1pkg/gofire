@@ -18,10 +18,10 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	_, _ = internal.GoExec("go get github.com/charmbracelet/bubbletea")(context.TODO(), dir)
-	_, _ = internal.GoExec("go get github.com/charmbracelet/bubbles")(context.TODO(), dir)
-	_, _ = internal.GoExec("go get github.com/charmbracelet/lipgloss")(context.TODO(), dir)
-	_, _ = internal.GoExec("go get github.com/atotto/clipboard")(context.TODO(), dir)
+	_, _ = internal.GoExec("get github.com/charmbracelet/bubbletea")(context.TODO(), dir)
+	_, _ = internal.GoExec("get github.com/charmbracelet/bubbles")(context.TODO(), dir)
+	_, _ = internal.GoExec("get github.com/charmbracelet/lipgloss")(context.TODO(), dir)
+	_, _ = internal.GoExec("get github.com/atotto/clipboard")(context.TODO(), dir)
 }
 
 func TestBubbleTeaDriver(t *testing.T) {
