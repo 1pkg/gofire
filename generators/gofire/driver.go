@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 
@@ -133,7 +135,6 @@ func (d *driver) VisitArgument(a gofire.Argument) error {
 	case gofire.Float32, gofire.Float64:
 	case gofire.Complex64, gofire.Complex128:
 	case gofire.String:
-	case gofire.Array:
 	case gofire.Slice:
 	case gofire.Map:
 	default:
@@ -194,7 +195,6 @@ func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 	case gofire.Float32, gofire.Float64:
 	case gofire.Complex64, gofire.Complex128:
 	case gofire.String:
-	case gofire.Array:
 	case gofire.Slice:
 	case gofire.Map:
 	default:
@@ -245,6 +245,8 @@ func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 }
 
 func include(buf *bytes.Buffer, path string) error {
+	_, p, _, _ := runtime.Caller(0)
+	path = filepath.Join(filepath.Dir(p), path)
 	f, err := os.Open(path)
 	if err != nil {
 		return err

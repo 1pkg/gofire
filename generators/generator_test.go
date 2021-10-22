@@ -105,7 +105,7 @@ func TestGeneratorGenerate(t *testing.T) {
 			return "{{"
 		}
 		err := generators.Generate(context.TODO(), generators.DriverName("test_generate"), gofire.Command{}, nil)
-		if fmt.Sprintf("%v", err) != `template: gen:4: unexpected "{" in command` {
+		if fmt.Sprintf("%v", err) != `template: gen:5: unexpected "{" in command` {
 			t.Fatalf("generate should fail on driver broken template error with message %q", err)
 		}
 	})
@@ -120,7 +120,7 @@ func TestGeneratorGenerate(t *testing.T) {
 			return "{{.Error}}"
 		}
 		err := generators.Generate(context.TODO(), generators.DriverName("test_generate"), gofire.Command{}, nil)
-		if fmt.Sprintf("%v", err) != `template: gen:3:3: executing "gen" at <.Error>: can't evaluate field Error in type generators.proxy` {
+		if fmt.Sprintf("%v", err) != `template: gen:4:3: executing "gen" at <.Error>: can't evaluate field Error in type generators.proxy` {
 			t.Fatalf("generate should fail on driver template expanding error with message %q", err)
 		}
 	})
@@ -135,7 +135,7 @@ func TestGeneratorGenerate(t *testing.T) {
 			return "func {{.Import}}"
 		}
 		err := generators.Generate(context.TODO(), generators.DriverName("test_generate"), gofire.Command{}, nil)
-		if fmt.Sprintf("%v", err) != "2:2: expected 'package', found 'func'" {
+		if fmt.Sprintf("%v", err) != "3:2: expected 'package', found 'func'" {
 			t.Fatalf("generate should fail on driver code formating error with message %q", err)
 		}
 	})

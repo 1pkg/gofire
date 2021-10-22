@@ -77,12 +77,26 @@ argument 1-th is required
 exit status 2
 `,
 		},
+		"echo complex params types should produce expected output on valid params": {
+			dir:      "echo_complex_params",
+			pckg:     "main",
+			function: "echo",
+			params:   []string{`--a="{1,2,3,4,5}"`, `--b="{{1},{2},{3}}"`, `"{test1:{'aaa', 'bbb'}, test2:{bbb, aaa}}"`},
+			out:      "[1 2 3 4 5] [[1] [2] [3]] map[test1:['aaa' 'bbb'] test2:[bbb aaa]]\n",
+		},
 		"echo group params types should produce expected output on valid params": {
 			dir:      "echo_group_params",
 			pckg:     "main",
 			function: "echo",
 			params:   []string{"--g1.a=100"},
 			out:      "1:100 2:10\n",
+		},
+		"echo complex group params types should produce expected output on valid params": {
+			dir:      "echo_complex_group_params",
+			pckg:     "main",
+			function: "echo",
+			params:   []string{`--g.b="{1:2}"`},
+			out:      "{map[key:value] map[1:2]}\n",
 		},
 		"echo group params types should produce expected error on invalid params": {
 			dir:      "echo_group_params",

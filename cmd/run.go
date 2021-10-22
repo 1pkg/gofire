@@ -11,6 +11,8 @@ import (
 	"github.com/1pkg/gofire/parsers"
 )
 
+// Run first parse provided package function, then
+// generates relevant cli boilerplate and writes it to a file.
 func Run(ctx context.Context, name generators.DriverName, dir, pckg, function string) error {
 	cmd, err := parsers.Parse(ctx, os.DirFS(dir), pckg, function)
 	if err != nil {
@@ -20,7 +22,7 @@ func Run(ctx context.Context, name generators.DriverName, dir, pckg, function st
 	if err := generators.Generate(ctx, name, *cmd, &b); err != nil {
 		return err
 	}
-	f, err := os.Create(filepath.Join(dir, fmt.Sprintf("%s.go", name)))
+	f, err := os.Create(filepath.Join(dir, fmt.Sprintf("%s.gen.go", name)))
 	if err != nil {
 		return err
 	}

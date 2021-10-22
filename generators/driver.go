@@ -7,6 +7,7 @@ import (
 	"github.com/1pkg/gofire"
 )
 
+// DriverName holds names of drivers implementations.
 type DriverName string
 
 const (
@@ -17,6 +18,7 @@ const (
 	DriverNameBubbleTea DriverName = "bubbletea"
 )
 
+// Reference helps to represent full qualified group name.
 type Reference string
 
 func NewReference(typ, g, f string) *Reference {

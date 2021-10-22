@@ -5,6 +5,7 @@ import (
 	"strings"
 )
 
+// Kind holds information about supported data kinds.
 type Kind uint8
 
 const (
@@ -144,6 +145,7 @@ func (k Kind) Base() int16 {
 	}
 }
 
+// Typ defines an abstraction for a data type.
 type Typ interface {
 	Kind() Kind
 	Type() string
