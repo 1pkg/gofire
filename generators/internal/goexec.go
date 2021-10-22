@@ -35,7 +35,7 @@ func (a Action) RunOnTest(ctx context.Context, name generators.DriverName, dir, 
 	if err := a.copy(dir, d); err != nil {
 		return "", err
 	}
-	if err := cmd.Run(ctx, name, d, pckg, function); err != nil {
+	if _, err := cmd.Run(ctx, name, d, pckg, function); err != nil {
 		return "", err
 	}
 	return a(ctx, d)

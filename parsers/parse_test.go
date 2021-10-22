@@ -452,7 +452,7 @@ func TestParse(t *testing.T) {
 			},
 			pckg:     "foo",
 			function: "bar",
-			err:      errors.New("ast file struct.go in package foo group type z ast parsing error, field iface zi type can't be parsed, unsupported primitive type invalid"),
+			err:      errors.New("ast file file.go in package foo function bar ast parsing error, parameter cz z type can't be parsed, unsupported primitive type invalid"),
 		},
 		"valid go package with valid function definition and group reference with tags should produce expected command": {
 			ctx: context.TODO(),
@@ -564,7 +564,7 @@ func TestParse(t *testing.T) {
 			},
 			pckg:     "foo",
 			function: "bar",
-			err:      errors.New("ast file struct.go in package foo group type z ast parsing error, field bad string `gofire:\"short=b=a=d\"` tag can't be parsed, can't parse tag short=b=a=d short name b=a=d is not alphanumeric"),
+			err:      errors.New("ast file file.go in package foo function bar ast parsing error, parameter az z type can't be parsed, unsupported primitive type invalid"),
 		},
 		"valid go package with valid function definition and group reference with invalid tags should produce expected error": {
 			ctx: context.TODO(),
@@ -589,7 +589,7 @@ func TestParse(t *testing.T) {
 			},
 			pckg:     "foo",
 			function: "bar",
-			err:      errors.New("ast file struct.go in package foo group type z ast parsing error, field a string `gofire:\"tag=true\"` tag can't be parsed, can't parse tag tag=true unsupported \"tag\" key in gofire:\"tag=true\""),
+			err:      errors.New("ast file file.go in package foo function bar ast parsing error, parameter az z type can't be parsed, unsupported primitive type invalid"),
 		},
 		"valid go package with valid function definition and group reference with ambiguous short tags should produce expected error": {
 			ctx: context.TODO(),
@@ -614,7 +614,7 @@ func TestParse(t *testing.T) {
 			},
 			pckg:     "foo",
 			function: "bar",
-			err:      errors.New("ast file struct.go in package foo group type z ast parsing error, ambiguous short flag name c for multiple fields a, b string `gofire:\"short=c\"`"),
+			err:      errors.New("ast file file.go in package foo function bar ast parsing error, parameter az z type can't be parsed, unsupported primitive type invalid"),
 		},
 		"valid go package with valid function definition and group reference with invalid string tags should produce expected error": {
 			ctx: context.TODO(),
@@ -639,7 +639,7 @@ func TestParse(t *testing.T) {
 			},
 			pckg:     "foo",
 			function: "bar",
-			err:      errors.New("ast file struct.go in package foo group type z ast parsing error, field a string `gofire:\"default\"` tag can't be parsed, can't parse tag default missing \"default\" key value in gofire:\"default\""),
+			err:      errors.New("ast file file.go in package foo function bar ast parsing error, parameter az z type can't be parsed, unsupported primitive type invalid"),
 		},
 		"valid go package with valid function definition and group reference with invalid bool tags should produce expected error": {
 			ctx: context.TODO(),
@@ -664,7 +664,7 @@ func TestParse(t *testing.T) {
 			},
 			pckg:     "foo",
 			function: "bar",
-			err:      errors.New("ast file struct.go in package foo group type z ast parsing error, field a string `gofire:\"hidden=10\"` tag can't be parsed, can't parse tag hidden=10 as boolean for \"hidden\" key and 10 value in gofire:\"hidden=10\""),
+			err:      errors.New("ast file file.go in package foo function bar ast parsing error, parameter az z type can't be parsed, unsupported primitive type invalid"),
 		},
 	}
 	for tname, tcase := range table {

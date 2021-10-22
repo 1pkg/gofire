@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	if err := cmd.Run(
+	if _, err := cmd.Run(
 		context.Background(),
 		generators.DriverNameGofire,
 		"../gofire",

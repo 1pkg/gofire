@@ -8,6 +8,7 @@ import (
 	goparser "go/parser"
 	"go/token"
 	"io/fs"
+	"log"
 	"strconv"
 	"strings"
 	"unicode"
@@ -55,13 +56,9 @@ func Parse(ctx context.Context, dir fs.FS, pckg, function string) (*gofire.Comma
 					tspec, ok := spec.(*ast.TypeSpec)
 					if ok {
 						if err := p.register(file, gdecl, tspec); err != nil {
-							return nil, fmt.Errorf(
-								"ast file %s in package %s group type %s ast parsing error, %w",
-								file.fname,
-								pckg,
-								tspec.Name.Name,
-								err,
-							)
+							// in case type can't be parsed just skip it.
+							log.Print(err)
+							continue
 						}
 					}
 				}
