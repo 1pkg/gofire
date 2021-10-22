@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/1pkg/gofire"
@@ -19,21 +20,84 @@ func init() {
 type driver struct {
 	internal.Driver
 	bytes.Buffer
+	usageList []string
+	printList []string
 }
 
-func (d driver) Output(gofire.Command) (string, error) {
-	return d.String(), nil
+func (d driver) Output(cmd gofire.Command) (string, error) {
+	var buf bytes.Buffer
+	sort.Strings(d.usageList)
+	sort.Strings(d.printList)
+	u := strings.Join(d.usageList, " ")
+	p := strings.Join(d.printList, " ")
+	if _, err := fmt.Fprintf(
+		&buf,
+		`
+			help := func() {
+				doc, usage, list := %q, %q, %q
+				if doc != "" {
+					_, _ = fmt.Fprintln(flag.CommandLine.Output(), doc)
+				}
+				if usage != "" {
+					_, _ = fmt.Fprintln(flag.CommandLine.Output(), usage)
+				}
+				if list != "" {
+					_, _ = fmt.Fprintln(flag.CommandLine.Output(), list)
+				}
+			}
+		`,
+		cmd.Doc,
+		fmt.Sprintf("%s %s [--help]", cmd.Function, u),
+		fmt.Sprintf("%s, %s", cmd.Definition, p),
+	); err != nil {
+		return "", err
+	}
+	if _, err := buf.WriteString(
+		`
+			defer func() {
+				if err != nil {
+					help()
+				}
+			}()
+		`,
+	); err != nil {
+		return "", err
+	}
+	if err := include(&buf, "tokenize.go"); err != nil {
+		return "", err
+	}
+	if _, err := buf.WriteString("args, flags, err := tokenize(os.Args[1:]);"); err != nil {
+		return "", err
+	}
+	if _, err := buf.WriteString(
+		`
+			if err != nil {
+				return err
+			}
+			if args == nil {
+				args = nil
+			}
+			if flags == nil {
+				flags = nil
+			}
+			if flags["help"] == "true" {
+				return errors.New("help requested")
+			}
+		`,
+	); err != nil {
+		return "", err
+	}
+	if _, err := buf.ReadFrom(&d.Buffer); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
 }
 
 func (d *driver) Reset() error {
 	_ = d.Driver.Reset()
 	d.Buffer.Reset()
-	if err := d.include("tokenize.go"); err != nil {
-		return err
-	}
-	if _, err := d.WriteString("args, flags, err := tokenize(os.Args[1:]);"); err != nil {
-		return err
-	}
+	d.usageList = nil
+	d.printList = nil
 	return nil
 }
 
@@ -104,6 +168,8 @@ func (d *driver) VisitArgument(a gofire.Argument) error {
 	); err != nil {
 		return err
 	}
+	d.usageList = append(d.usageList, fmt.Sprintf("arg%d", a.Index))
+	d.printList = append(d.printList, fmt.Sprintf("arg %d %s", a.Index, p.Type.Type()))
 	return nil
 }
 
@@ -116,6 +182,10 @@ func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 	if ptr {
 		typ = tprt.ETyp
 		amp = "&"
+	}
+	full := p.Full
+	if p.Ref != nil {
+		full = fmt.Sprintf("%s.%s", p.Ref.Group(), full)
 	}
 	switch typ.Kind() {
 	case gofire.Bool:
@@ -154,7 +224,7 @@ func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 				%s = %st
 			}
 		`,
-		p.Full,
+		full,
 		typ,
 		p.Name,
 		typ.Format(f.Default),
@@ -166,10 +236,15 @@ func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 	); err != nil {
 		return err
 	}
+	d.usageList = append(d.usageList, fmt.Sprintf("--%s=%s", full, typ.Format(f.Default)))
+	d.printList = append(
+		d.printList,
+		fmt.Sprintf("--%s %s %s (default %s)", full, typ.Type(), p.Doc, typ.Format(f.Default)),
+	)
 	return nil
 }
 
-func (d *driver) include(path string) error {
+func include(buf *bytes.Buffer, path string) error {
 	f, err := os.Open(path)
 	if err != nil {
 		return err
@@ -182,7 +257,7 @@ func (d *driver) include(path string) error {
 		return err
 	}
 	s := strings.SplitN(string(b), "// #include", 2)
-	if _, err := d.WriteString(s[1]); err != nil {
+	if _, err := buf.WriteString(s[1]); err != nil {
 		return err
 	}
 	return nil

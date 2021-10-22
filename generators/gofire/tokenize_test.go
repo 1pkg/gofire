@@ -50,10 +50,10 @@ func TestTokenize(t *testing.T) {
 			},
 		},
 		"mixture of valid params tokens at the end should return expected result": {
-			tokens: []string{"--dd=aaaa", "--fff", "20.20", "--az", "az-bd", "100", `"zzz"`, "true"},
+			tokens: []string{"--d.d=aaaa", "--fff", "20.20", "--az", "az-bd", "100", `"zzz"`, "true"},
 			args:   []string{"100", `"zzz"`, "true"},
 			flags: map[string]string{
-				"dd":  "aaaa",
+				"d.d": "aaaa",
 				"fff": "20.20",
 				"az":  "az-bd",
 			},
@@ -66,9 +66,22 @@ func TestTokenize(t *testing.T) {
 				"fff": "{test:{}, t:{1,2} }",
 			},
 		},
+		"mixture of valid complex params tokens and help should return expected result": {
+			tokens: []string{"{100, 220, -10,  } ", `--dd={aaaa:"bbbb--"}`, `"zzz"`, "--fff", "    ", " {test:{}, t:{1,2} } ", " ", "true", "--help"},
+			args:   nil,
+			flags:  map[string]string{"help": "true"},
+		},
 		"implicit bool flags tokens should produce tokenizer error": {
 			tokens: []string{"--fl", "100", "--dd=aaaa", "--az", "az-bd", "--t"},
 			err:    errors.New("provided cli parameters [--fl 100 --dd=aaaa --az az-bd --t] can't be tokenized near token  --t"),
+		},
+		"short flags should produce tokenizer error": {
+			tokens: []string{"--fl", "100", "-az", "az-bd", "-dd=aaaa"},
+			err:    errors.New("short flag name -az can't be tokenized"),
+		},
+		"short flags with equal sign should produce tokenizer error": {
+			tokens: []string{"-b=test", "--g1.flag1=100"},
+			err:    errors.New("short flag name -b=test can't be tokenized"),
 		},
 		"non alphanumeric flags tokens should produce tokenizer error": {
 			tokens: []string{"--fl", "100", "--dd++=aaaa", "--az", "az-bd", "--t=1"},

@@ -12,7 +12,7 @@ var tokenize = func(tokens []string) (args []string, flags map[string]string, er
 	var flname = func(token string) (string, error) {
 		fln := strings.Replace(token, "--", "", 1)
 		for _, r := range fln {
-			if !(unicode.IsLetter(r) || unicode.IsDigit(r)) {
+			if r != '.' && !(unicode.IsLetter(r) || unicode.IsDigit(r)) {
 				return "", fmt.Errorf("flag name %s is not alphanumeric and can't be tokenized", fln)
 			}
 		}
@@ -30,10 +30,15 @@ var tokenize = func(tokens []string) (args []string, flags map[string]string, er
 			continue
 		}
 		iflag, iflagPrev := strings.HasPrefix(token, "--"), strings.HasPrefix(prevToken, "--")
+		f, _ := flname(token)
 		switch {
 		case !iflag && !iflagPrev:
-			args = append(args, token)
-			prevToken = ""
+			if strings.HasPrefix(token, "-") {
+				err = fmt.Errorf("short flag name %s can't be tokenized", token)
+			} else {
+				args = append(args, token)
+				prevToken = ""
+			}
 		case iflag && strings.Contains(token, "="):
 			parts := strings.SplitN(token, "=", 2)
 			fln, err = flname(parts[0])
@@ -43,6 +48,9 @@ var tokenize = func(tokens []string) (args []string, flags map[string]string, er
 			fln, err = flname(prevToken)
 			flags[fln] = token
 			prevToken = ""
+		case f == "help":
+			args, flags = nil, map[string]string{"help": "true"}
+			return
 		case iflag && i != ltkns-1:
 			prevToken = token
 		default:
