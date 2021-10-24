@@ -1,4 +1,4 @@
-package gofire
+package reftype
 
 import (
 	"bytes"
@@ -16,7 +16,7 @@ import (
 )
 
 func init() {
-	generators.Register(generators.DriverNameGofire, internal.Cached(internal.Annotated(new(driver))))
+	generators.Register(generators.DriverNameRefType, internal.Cached(internal.Annotated(new(driver))))
 }
 
 type driver struct {
@@ -123,7 +123,7 @@ func (d *driver) VisitArgument(a gofire.Argument) error {
 	if a.Ellipsis {
 		return fmt.Errorf(
 			"driver %s: ellipsis argument types are not supported, got an argument %s %s",
-			generators.DriverNameGofire,
+			generators.DriverNameRefType,
 			p.Name,
 			a.Type.Type(),
 		)
@@ -140,7 +140,7 @@ func (d *driver) VisitArgument(a gofire.Argument) error {
 	default:
 		return fmt.Errorf(
 			"driver %s: argument type %s is not supported for an argument %s",
-			generators.DriverNameGofire,
+			generators.DriverNameRefType,
 			p.Type.Type(),
 			p.Name,
 		)
@@ -200,7 +200,7 @@ func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 	default:
 		return fmt.Errorf(
 			"driver %s: flag type %s is not supported for a flag %s",
-			generators.DriverNameGofire,
+			generators.DriverNameRefType,
 			p.Type.Type(),
 			p.Name,
 		)

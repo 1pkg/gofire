@@ -1,4 +1,4 @@
-package gofire
+package reftype
 
 import (
 	"errors"

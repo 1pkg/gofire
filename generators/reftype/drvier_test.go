@@ -1,4 +1,4 @@
-package gofire
+package reftype
 
 import (
 	"context"
@@ -22,7 +22,7 @@ func init() {
 	_, _ = internal.GoExec("get github.com/mitchellh/mapstructure")(context.TODO(), dir)
 }
 
-func TestGofireDriver(t *testing.T) {
+func TestRefTypeDriver(t *testing.T) {
 	table := map[string]struct {
 		dir      string
 		pckg     string
@@ -115,13 +115,13 @@ exit status 2
 			pckg:     "main",
 			function: "echo",
 			params:   []string{"1", "10", "100"},
-			err:      errors.New(`driver gofire: ellipsis argument types are not supported, got an argument a0 int`),
+			err:      errors.New(`driver reftype: ellipsis argument types are not supported, got an argument a0 int`),
 		},
 	}
 	for tname, tcase := range table {
 		t.Run(tname, func(t *testing.T) {
 			exec := internal.GoExec("run -tags=tcases .", tcase.params...)
-			out, err := exec.RunOnTest(context.TODO(), generators.DriverNameGofire, filepath.Join("tcases", tcase.dir), tcase.pckg, tcase.function)
+			out, err := exec.RunOnTest(context.TODO(), generators.DriverNameRefType, filepath.Join("tcases", tcase.dir), tcase.pckg, tcase.function)
 			if fmt.Sprintf("%v", tcase.err) != fmt.Sprintf("%v", err) {
 				t.Fatalf("expected error message %q but got %q\n%v", tcase.err, err, out)
 			}

@@ -45,11 +45,11 @@ func Gofire(ctx context.Context, driver, pckg *string, dir, fun string), --drive
 help requested
 ```
 
-To run Gofire generator CLI tool with `gofire` driver on function `Gofire` in package `main` in path `cmd/gofire`, use:
+To run Gofire generator CLI tool with `pflag` driver on function `Gofire` in package `main` in path `cmd/gofire`, use:
 
 ```bash
-gofire --driver=gofire --pckg=main cmd/gofire Gofire
-cmd/gofire/gofire.gen.go successfully generated
+gofire --driver=pflag --pckg=main cmd/gofire Gofire
+cmd/gofire/pflag.gen.go successfully generated
 ```
 
 Note that Gofire can be easily integrated into the build process on permanent basis by adding the comment to your Go code base and using `go generate` command.
@@ -73,6 +73,7 @@ Gofire uses next convention while parsing a function and genereting a bridge to 
 - function pointer parametrs become optional command auto flags with default empty values.
 - function ellipsis parametr `...` is a special case that become ellipsis positional argument.
 - function placeholder parametrs `_` is a special case that become filled with empty value internally.
+- main entrypoint will be generated only if source function is located in `main` package.
 
 As an concise example the definition below will be converted to:
 
@@ -121,7 +122,9 @@ inside
 
 ## Flags Groups and Tags
 
-Gofire provides a way to bypass some rules defined in [parsing and generation convention](#parsing-and-generation-convention). Mainly grouping; adding defaults, short names, docs to CLI flags; and marking them as deprecated or hidden. This can be achieved by using a struct type as a function parameter together with special structure tag literals which will act as a flags group. Gofire uses next schema for tag literals `gofire:"short=name,default=value,deprecated,hidden"`. Where `short` represents optional flag short name, `default` represents optional flag default value accordingly the type, `deprecated` represents optional flag deprecation status, `hidden` represents optional flag hidden status. Note that the structure has to be defined in the same package with the source function and that type aliases currently are not supported by Gofire.
+Gofire provides a way to bypass some rules defined in [parsing and generation convention](#parsing-and-generation-convention). Mainly grouping; adding defaults, short names, docs to CLI flags; and marking them as deprecated or hidden. This can be achieved by using a struct type as a function parameter together with special structure tag literals which will act as a flags group.
+
+Gofire uses next schema for tag literals `gofire:"short=name,default=value,deprecated,hidden"`. Where `short` represents optional flag short name, `default` represents optional flag default value accordingly the type, `deprecated` represents optional flag deprecation status, `hidden` represents optional flag hidden status. Note that the structure has to be defined in the same package with the source function and that type aliases currently are not supported by Gofire.
 
 As an concise example the definition below will be converted to:
 
@@ -186,9 +189,9 @@ PFlag Backend is similar to Flag Backend, but it also adds extra support for sli
 
 Cobra Backend mirrors PFlag Backend support for data types and tag literals. Cobra Backend is based on https://github.com/spf13/cobra package.
 
-#### Gofire Backend
+#### RefType Backend
 
-Gofire Backend aims to support complex nested data types including slice and maps for both flags and positional arguments. It doesn't support any tag literals features other then default values. Note that ellipsis parameters are not supported as they generally makes no sense for this driver. Also note that it uses github.com/mitchellh/mapstructure and reflection underneath. This driver expects all CLI values be prodived in their raw form not preprocessed by a shell, meaning you should always escape comlex data types values with `"` when using this driver e.g. `--stringMapOfIntSlices="{first:{1,2,3}, second:{0}, third:{3,2,1}}"`.
+RefType Backend aims to support complex nested data types including slice and maps for both flags and positional arguments. It doesn't support any tag literals features other then default values. Note that ellipsis parameters are not supported as they generally makes no sense for this driver. Also note that it uses github.com/mitchellh/mapstructure and reflection underneath. This driver expects all CLI values be prodived in their raw form not preprocessed by a shell, meaning you should always escape comlex data types values with `"` when using this driver e.g. `--stringMapOfIntSlices="{first:{1,2,3}, second:{0}, third:{3,2,1}}"`.
 
 #### Bubbletea Backend
 

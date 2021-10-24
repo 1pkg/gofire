@@ -6,13 +6,13 @@ import (
 
 	"github.com/1pkg/gofire/cmd"
 	"github.com/1pkg/gofire/generators"
-	_ "github.com/1pkg/gofire/generators/gofire"
+	_ "github.com/1pkg/gofire/generators/flag"
 )
 
 func main() {
 	if _, err := cmd.Run(
 		context.Background(),
-		generators.DriverNameGofire,
+		generators.DriverNameFlag,
 		"../gofire",
 		"main",
 		"Gofire",
