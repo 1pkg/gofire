@@ -17,9 +17,9 @@ Gofire is the tool for Go that automatically generates a command line interface 
 
 ## Features
 
-- Gofire uses code generation to generate simple and predictable CLI tailored to your code. It takes care about all required plumbing around paramters parsing, types casting, setting the entrypoint, documentation, etc.
-- Gofire provides multiple CLI backends with different capabilities and features, including: [flag](https://pkg.go.dev/flag), [cobra](https://github.com/spf13/cobra), [bubbletea](https://github.com/charmbracelet/bubbletea), and more.
-- Gofire is opinionated about the defaults and always tries to provide simple and safe CLI. Yet, if needed, it supports optional go structs tag literals to flexibily configure CLI parameters [see more](#flags-groups-and-tags).
+- Gofire uses code generation to generate simple and predictable CLI tailored to your code. It takes care about all required plumbing around parameters parsing, types casting, setting the entrypoint, documentation, etc.
+- Gofire provides multiple CLI backends with different capabilities and features, including: [flag](https://pkg.go.dev/flag), [cobra](https://github.com/spf13/cobra), [bubbletea](https://github.com/charmbracelet/bubbletea), [and more](#drivers-and-backends).
+- Gofire is opinionated about the defaults and always tries to provide simple and safe CLI. Yet, if needed, it supports optional go structs tag literals to flexibly configure CLI parameters [see more](#flags-groups-and-tags).
 
 ## Requirements Installation and Usage
 
@@ -77,20 +77,20 @@ Gofire uses next convention while parsing a function and genereting a bridge to 
 As an concise example the definition bellow will be converted to:
 
 ```go
-                            optional float64 cli flag 'c'
-                                            │ default 0.0
-                                            │
-                                            │
-                                            │
-              2 required int positional argu│ents
-                                │           │
-                                │           │
-                                │           │optional []float64 cli flag 'in'
-           command name         │           │          │  default []float64{}
-                 │              │           │          │
-                 │              │           │          │
-                 │              │           │          │
-                 │              │           │          │
+//                          optional float64 cli flag 'c'
+//                                          │ default 0.0
+//                                          │
+//                                          │
+//                                          │
+//            2 required int positional argu│ents
+//                              │           │
+//                              │           │
+//                              │           │optional []float64 cli flag 'in'
+//         command name         │           │          │  default []float64{}
+//               │              │           │          │
+//               │              │           │          │
+//               │              │           │          │
+//               │              │           │          │
 func addThenMultiplyAndGuess(a, b int, c *float64, in *[]float64, _ string) bool {
   sum := float64(a + b)
   guess := sum * (*c)
@@ -131,12 +131,12 @@ package main
 import "fmt"
 
 type person struct {
-	fullName string `gofire:"short=n`
+	fullName string `gofire:"short=n"`
 	// bornY is deprecated use bornYear isntead.
-	bornY    int `gofire:"deprecated`
+	bornY    int `gofire:"deprecated"`
 	bornYear int
 	// please use full occupation.
-	occupation string `gofire:"default='professional wrestler'`
+	occupation string `gofire:"default='professional wrestler'"`
 }
 
 // wasBorn answers the question if person was born in the provided year and prints the person.
@@ -156,24 +156,43 @@ go run ./... --help
 wasBorn: wasBorn answers the question if person was born in the provided year and prints the person.
 
 Usage:
-  wasBorn --bornY=0 --p.bornY=0 --p.bornYear=0 --p.fullName="" --p.occupation=""
+  wasBorn --bornY=0 --p.bornY=0 --p.bornYear=0 --p.fullName="" -n="" --p.occupation="professional wrestler"
 
 Flags:
       --bornY int
   -h, --help                  help for wasBorn
-      --p.bornY int           bornY is deprecated use bornYear isntead.
       --p.bornYear int
-      --p.fullName string
-      --p.occupation string   please use full occupation.
+  -n, --p.fullName string
+      --p.occupation string   please use full occupation. (default "professional wrestler")
 # exec
 go run ./... -n="the Rock" --p.bornYear=1972 --bornY=1975
 yes
 {the Rock 0 1972 professional wrestler}
 ```
 
+You can specify default values for comlex data types using simplified Go syntax for slice and map literals e.g. `{1,2,3}`; `{10:aaa, 20:bbb}`; `{'foo bar':{1:test, 2:'not test'}}`. Currently, there are few known minor limitations in complex values parser in Gofire [see more](parsers/doc.go).
+
 ## Drivers and Backends
 
-TODO
+#### Flag Backend
+
+Flag Backend is used as the backend by default in Gofire. This backend strives for simplicity and doesn't support any complex types. It also doesn't support short flag names and flags deprecation and hidding. However it still supports flags default values and ellipsis positional argument. Flag Backend is based on https://pkg.go.dev/flag package.
+
+#### PFlag Backend
+
+PFlag Backend is similar to Flag Backend, but it also adds extra support for slice type flags and fully supports Gofire tag literals, including short flag names and flags deprecation and hidding. PFlag Backend is based on https://github.com/spf13/pflag package.
+
+#### Cobra Backend
+
+Cobra Backend mirrors PFlag Backend support for data types and tag literals. Cobra Backend is based on https://github.com/spf13/cobra package.
+
+#### Gofire Backend
+
+Gofire Backend aims to support complex nested data types including slice and maps for both flags and positional arguments. It doesn't support any tag literals features other then default values. Note that ellipsis parameters are not supported as they generally makes no sense for this driver. Also note that it uses github.com/mitchellh/mapstructure and reflection underneath. This driver expects all CLI values be prodived in their raw form not preprocessed by shell, meaning you should always escape comlex data types values with `"` when using this driver e.g. `--stringMapOfIntSlices="{first:{1,2,3}, second:{0}, third:{3,2,1}}"`.
+
+#### Bubbletea Backend
+
+Bubbletea Backend generates a simple interactive TUI. This backend only supports positional arguments and naturally doesn't support any flags groups tag literals or ellipsis parameters. Bubbletea Backend is based on https://github.com/charmbracelet/bubbletea.
 
 ## Licence
 

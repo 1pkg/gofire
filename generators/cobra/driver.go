@@ -477,14 +477,16 @@ func (d *driver) flag(name, full, short string, t gofire.Typ, ptr bool, val inte
 		); err != nil {
 			return err
 		}
-		if _, err := fmt.Fprintf(&d.preParse,
-			`
+		if short != "" {
+			if _, err := fmt.Fprintf(&d.preParse,
+				`
 				cli.Flags().MarkShorthandDeprecated(%q, "deprecated: %s")
 			`,
-			short,
-			doc,
-		); err != nil {
-			return err
+				short,
+				doc,
+			); err != nil {
+				return err
+			}
 		}
 	}
 	if hidden {
