@@ -1,20 +1,18 @@
-name: lint
+name: build
 on: [push, pull_request]
 jobs:
-  lint:
+  build:
     strategy:
       matrix:
         go-version: [1.17.x]
-        platform: [ubuntu-latest]
+        platform: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.platform }}
     steps:
       - name: setup
         uses: actions/setup-go@v2
         with:
           go-version: ${{ matrix.go-version }}
-      - uses: actions/checkout@v2
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v2
-        with:
-          version: v1.42
-          args: -E misspell -E golint
+      - name: checkout
+        uses: actions/checkout@v2
+      - name: build
+        run: go build ./cmd/gofire/...

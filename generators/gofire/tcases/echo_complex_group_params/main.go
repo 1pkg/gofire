@@ -1,4 +1,4 @@
-// +build tcases
+//go:build tcases
 
 package main
 
