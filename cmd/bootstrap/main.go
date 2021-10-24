@@ -15,7 +15,7 @@ func main() {
 		generators.DriverNameGofire,
 		"../gofire",
 		"main",
-		"run",
+		"Gofire",
 	); err != nil {
 		log.Fatalln(err)
 	}
