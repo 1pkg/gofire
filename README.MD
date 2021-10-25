@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="https://raw.githubusercontent.com/1pkg/gofire/master/gopher.png" alt="gofire"/>
+    <img src="https://raw.githubusercontent.com/1pkg/gofire/master/gopher.png?cache=0" alt="gofire"/>
 </p>
 
 # Gofire 🔥: Command Line Interface Generator tool for Go
@@ -7,9 +7,9 @@
 [![lint](https://github.com/1pkg/gofire/workflows/lint/badge.svg)](https://github.com/1pkg/gofire/actions?query=workflow%3Alint+branch%3Amaster+)
 [![build](https://github.com/1pkg/gofire/workflows/build/badge.svg)](https://github.com/1pkg/gofire/actions?query=workflow%3Abuild+branch%3Amaster+)
 [![test](https://github.com/1pkg/gofire/workflows/test/badge.svg)](https://github.com/1pkg/gofire/actions?query=workflow%3Atest+branch%3Amaster+)
-[![report](https://goreportcard.com/badge/github.com/1pkg/gofire)](https://goreportcard.com/report/github.com/1pkg/gofire)
-[![version](https://img.shields.io/github/go-mod/go-version/1pkg/gofire)](https://github.com/1pkg/gofire/blob/master/go.mod)
-[![license](https://img.shields.io/github/license/1pkg/gofire)](LICENSE)
+[![report](https://goreportcard.com/badge/github.com/1pkg/gofire?cache=0)](https://goreportcard.com/report/github.com/1pkg/gofire)
+[![version](https://img.shields.io/github/go-mod/go-version/1pkg/gofire?cache=0)](https://github.com/1pkg/gofire/blob/master/go.mod)
+[![license](https://img.shields.io/github/license/1pkg/gofire?cache=0)](LICENSE)
 
 ## Introduction
 
@@ -28,7 +28,7 @@ Gofire uses go1.17, but it's most likely gonna work with other versions too. Not
 To install Gofire generator CLI tool, use:
 
 ```bash
-go install github.com/1pkg/gofire@latest
+go install github.com/1pkg/gofire/cmd/gofire@latest
 ```
 
 To call Gofire generator CLI tool help, use:
