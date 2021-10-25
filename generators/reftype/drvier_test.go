@@ -18,7 +18,9 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	_, _ = internal.GoExec("get github.com/1pkg/gofire")(context.TODO(), dir)
+	_, _ = internal.GoExec("get golang.org/x/tools/imports")(context.TODO(), dir)
 	_, _ = internal.GoExec("get github.com/mitchellh/mapstructure")(context.TODO(), dir)
 }
 
