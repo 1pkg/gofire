@@ -7,7 +7,7 @@
 [![lint](https://github.com/1pkg/gofire/workflows/lint/badge.svg)](https://github.com/1pkg/gofire/actions?query=workflow%3Alint+branch%3Amaster+)
 [![build](https://github.com/1pkg/gofire/workflows/build/badge.svg)](https://github.com/1pkg/gofire/actions?query=workflow%3Abuild+branch%3Amaster+)
 [![test](https://github.com/1pkg/gofire/workflows/test/badge.svg)](https://github.com/1pkg/gofire/actions?query=workflow%3Atest+branch%3Amaster+)
-[![report](https://goreportcard.com/badge/github.com/1pkg/gofire?nocache=1)](https://goreportcard.com/report/github.com/1pkg/gofire)
+[![report](https://goreportcard.com/badge/github.com/1pkg/gofire)](https://goreportcard.com/report/github.com/1pkg/gofire)
 [![version](https://img.shields.io/github/go-mod/go-version/1pkg/gofire)](https://github.com/1pkg/gofire/blob/master/go.mod)
 [![license](https://img.shields.io/github/license/1pkg/gofire)](LICENSE)
 
