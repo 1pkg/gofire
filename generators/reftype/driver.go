@@ -3,10 +3,6 @@ package reftype
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 
@@ -65,10 +61,7 @@ func (d driver) Output(cmd gofire.Command) (string, error) {
 	); err != nil {
 		return "", err
 	}
-	if err := include(&buf, "tokenize.go"); err != nil {
-		return "", err
-	}
-	if _, err := buf.WriteString("args, flags, err := tokenize(os.Args[1:]);"); err != nil {
+	if _, err := buf.WriteString("args, flags, err := reftype.Tokenize(os.Args[1:]);"); err != nil {
 		return "", err
 	}
 	if _, err := buf.WriteString(
@@ -103,6 +96,10 @@ func (d *driver) Reset() error {
 	return nil
 }
 
+func (driver) Name() generators.DriverName {
+	return generators.DriverNameRefType
+}
+
 func (d driver) Imports() []string {
 	return []string{
 		`"errors"`,
@@ -113,6 +110,7 @@ func (d driver) Imports() []string {
 		`"os"`,
 		`"github.com/1pkg/gofire"`,
 		`"github.com/1pkg/gofire/parsers"`,
+		`"github.com/1pkg/gofire/generators/reftype"`,
 		`"github.com/mitchellh/mapstructure"`,
 	}
 }
@@ -123,7 +121,7 @@ func (d *driver) VisitArgument(a gofire.Argument) error {
 	if a.Ellipsis {
 		return fmt.Errorf(
 			"driver %s: ellipsis argument types are not supported, got an argument %s %s",
-			generators.DriverNameRefType,
+			d.Name(),
 			p.Name,
 			a.Type.Type(),
 		)
@@ -140,7 +138,7 @@ func (d *driver) VisitArgument(a gofire.Argument) error {
 	default:
 		return fmt.Errorf(
 			"driver %s: argument type %s is not supported for an argument %s",
-			generators.DriverNameRefType,
+			d.Name(),
 			p.Type.Type(),
 			p.Name,
 		)
@@ -167,7 +165,7 @@ func (d *driver) VisitArgument(a gofire.Argument) error {
 		p.Name,
 		p.Name,
 	); err != nil {
-		return err
+		return fmt.Errorf("driver %s: argument %w", d.Name(), err)
 	}
 	d.usageList = append(d.usageList, fmt.Sprintf("arg%d", a.Index))
 	d.printList = append(d.printList, fmt.Sprintf("arg %d %s", a.Index, p.Type.Type()))
@@ -200,7 +198,7 @@ func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 	default:
 		return fmt.Errorf(
 			"driver %s: flag type %s is not supported for a flag %s",
-			generators.DriverNameRefType,
+			d.Name(),
 			p.Type.Type(),
 			p.Name,
 		)
@@ -234,33 +232,12 @@ func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 		p.Name,
 		amp,
 	); err != nil {
-		return err
+		return fmt.Errorf("driver %s: flag %w", d.Name(), err)
 	}
 	d.usageList = append(d.usageList, fmt.Sprintf("--%s=%s", full, typ.Format(f.Default)))
 	d.printList = append(
 		d.printList,
 		fmt.Sprintf("--%s %s %s (default %s)", full, typ.Type(), p.Doc, typ.Format(f.Default)),
 	)
-	return nil
-}
-
-func include(buf *bytes.Buffer, path string) error {
-	_, p, _, _ := runtime.Caller(0)
-	path = filepath.Join(filepath.Dir(p), path)
-	f, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-	b, err := ioutil.ReadAll(f)
-	if err != nil {
-		return err
-	}
-	if err := f.Close(); err != nil {
-		return err
-	}
-	s := strings.SplitN(string(b), "// #include", 2)
-	if _, err := buf.WriteString(s[1]); err != nil {
-		return err
-	}
 	return nil
 }

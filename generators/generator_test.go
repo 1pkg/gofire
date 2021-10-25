@@ -19,6 +19,10 @@ type driver struct {
 	template func() string
 }
 
+func (driver) Name() generators.DriverName {
+	return ""
+}
+
 func (d driver) Output(cmd gofire.Command) (string, error) {
 	return d.output(cmd)
 }

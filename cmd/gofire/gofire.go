@@ -17,7 +17,7 @@ import (
 // Gofire 🔥 is command line interface generator tool.
 // The first required argument dir represents directory path of source package.
 // The second required argument fun represents source function name.
-// Optional flag driver represents driver backend name, one of [gofire, flag, pflag, cobra, bubbletea], flag by default.
+// Optional flag driver represents driver backend name, one of [flag, pflag, cobra, reftype, bubbletea], flag by default.
 // Optional flag pckg represents source package name, useful if package name and directory is different, last element of dir by default.
 func Gofire(ctx context.Context, driver, pckg *string, dir, fun string) {
 	var d = "flag"

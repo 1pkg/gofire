@@ -27,7 +27,7 @@ func (p proxy) Package() string {
 }
 
 func (p proxy) Function() string {
-	return "Command" + p.command.Function
+	return "Command" + strings.Title(p.command.Function) + strings.Title(string(p.driver.Name()))
 }
 
 func (p proxy) Doc() string {

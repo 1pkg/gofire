@@ -66,6 +66,7 @@ type Parameter struct {
 
 type Driver interface {
 	Producer
+	Name() DriverName
 	Imports() []string
 	Parameters() []Parameter
 	Template() string

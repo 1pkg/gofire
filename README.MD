@@ -73,9 +73,10 @@ Gofire uses next convention while parsing a function and genereting a bridge to 
 - function pointer parametrs become optional command auto flags with default empty values.
 - function ellipsis parametr `...` is a special case that become ellipsis positional argument.
 - function placeholder parametrs `_` is a special case that become filled with empty value internally.
-- main entrypoint will be generated only if source function is located in `main` package.
+- entrypoint for main is generated only if source function is located in `main` package.
+- entrypoint for command is always generated as exported function in case you need to use it outside.
 
-As an concise example the definition below will be converted to:
+As an concise example the definition below is converted to:
 
 ```go
 //                          optional float64 cli flag 'c'
@@ -122,11 +123,11 @@ inside
 
 ## Flags Groups and Tags
 
-Gofire provides a way to bypass some rules defined in [parsing and generation convention](#parsing-and-generation-convention). Mainly grouping; adding defaults, short names, docs to CLI flags; and marking them as deprecated or hidden. This can be achieved by using a struct type as a function parameter together with special structure tag literals which will act as a flags group.
+Gofire provides a way to bypass some rules defined in [parsing and generation convention](#parsing-and-generation-convention). Mainly grouping; adding defaults, short names, docs to CLI flags; and marking them as deprecated or hidden. This can be achieved by using a struct type as a function parameter together with special structure tag literals which acts as a flags group.
 
 Gofire uses next schema for tag literals `gofire:"short=name,default=value,deprecated,hidden"`. Where `short` represents optional flag short name, `default` represents optional flag default value accordingly the type, `deprecated` represents optional flag deprecation status, `hidden` represents optional flag hidden status. Note that the structure has to be defined in the same package with the source function and that type aliases currently are not supported by Gofire.
 
-As an concise example the definition below will be converted to:
+As an concise example the definition below is converted to:
 
 ```go
 package main

@@ -6,9 +6,8 @@ import (
 	"unicode"
 )
 
-// #include
-
-var tokenize = func(tokens []string) (args []string, flags map[string]string, err error) {
+// Tokenize parses a list of tokens into relevant positional args and flags.
+func Tokenize(tokens []string) (args []string, flags map[string]string, err error) {
 	var flname = func(token string) (string, error) {
 		fln := strings.Replace(token, "--", "", 1)
 		for _, r := range fln {

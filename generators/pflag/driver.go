@@ -85,6 +85,10 @@ func (d *driver) Reset() error {
 	return nil
 }
 
+func (driver) Name() generators.DriverName {
+	return generators.DriverNamePFlag
+}
+
 func (d driver) Imports() []string {
 	return []string{
 		`"fmt"`,
@@ -101,13 +105,13 @@ func (d *driver) VisitArgument(a gofire.Argument) error {
 	if !ok {
 		return fmt.Errorf(
 			"driver %s: non primitive argument types are not supported, got an argument %s %s",
-			generators.DriverNamePFlag,
+			d.Name(),
 			p.Name,
 			typ.Type(),
 		)
 	}
 	if err := d.argument(p.Name, a.Index, tp, p.Ellipsis); err != nil {
-		return fmt.Errorf("driver %s: argument %w", generators.DriverNamePFlag, err)
+		return fmt.Errorf("driver %s: argument %w", d.Name(), err)
 	}
 	return nil
 }
@@ -128,14 +132,14 @@ func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 	case 0:
 	case 1:
 		if d.shortNames[p.Short] {
-			return fmt.Errorf("driver %s: short flag name %q has been already registred", generators.DriverNamePFlag, p.Short)
+			return fmt.Errorf("driver %s: short flag name %q has been already registred", d.Name(), p.Short)
 		}
 		d.shortNames[p.Short] = true
 	default:
-		return fmt.Errorf("driver %s: short flag name %q is not supported", generators.DriverNamePFlag, p.Short)
+		return fmt.Errorf("driver %s: short flag name %q is not supported", d.Name(), p.Short)
 	}
 	if err := d.flag(p.Name, full, p.Short, typ, ptr, f.Default, f.Doc, f.Deprecated, f.Hidden); err != nil {
-		return fmt.Errorf("driver %s: flag %w", generators.DriverNamePFlag, err)
+		return fmt.Errorf("driver %s: flag %w", d.Name(), err)
 	}
 	return nil
 }

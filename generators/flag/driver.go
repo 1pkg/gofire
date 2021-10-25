@@ -83,6 +83,10 @@ func (d *driver) Reset() error {
 	return nil
 }
 
+func (driver) Name() generators.DriverName {
+	return generators.DriverNameFlag
+}
+
 func (d driver) Imports() []string {
 	return []string{
 		`"flag"`,
@@ -99,13 +103,13 @@ func (d *driver) VisitArgument(a gofire.Argument) error {
 	if !ok {
 		return fmt.Errorf(
 			"driver %s: non primitive argument types are not supported, got an argument %s %s",
-			generators.DriverNameFlag,
+			d.Name(),
 			p.Name,
 			typ.Type(),
 		)
 	}
 	if err := d.argument(p.Name, a.Index, tp, a.Ellipsis); err != nil {
-		return fmt.Errorf("driver %s: argument %w", generators.DriverNameFlag, err)
+		return fmt.Errorf("driver %s: argument %w", d.Name(), err)
 	}
 	return nil
 }
@@ -122,7 +126,7 @@ func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 	if !ok {
 		return fmt.Errorf(
 			"driver %s: non pointer and non primitive flag types are not supported, got a flag %s %s",
-			generators.DriverNameFlag,
+			d.Name(),
 			p.Name,
 			f.Type.Type(),
 		)
@@ -132,7 +136,7 @@ func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
 		flag = fmt.Sprintf("%s.%s", p.Ref.Group(), flag)
 	}
 	if err := d.flag(p.Name, flag, tprim, ptr, f.Default, p.Doc); err != nil {
-		return fmt.Errorf("driver %s: flag %w", generators.DriverNameFlag, err)
+		return fmt.Errorf("driver %s: flag %w", d.Name(), err)
 	}
 	return nil
 }

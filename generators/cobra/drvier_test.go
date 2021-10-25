@@ -130,7 +130,7 @@ exit status 2
 			pckg:     "main",
 			function: "echo",
 			params:   []string{"-b=test", "--g1.flag1=100"},
-			err:      errors.New(`driver pflag: short flag name "a" has been already registred`),
+			err:      errors.New(`driver cobra: short flag name "a" has been already registred`),
 		},
 		"echo ellipsis params types should produce expected output on valid params": {
 			dir:      "echo_ellipsis_params",

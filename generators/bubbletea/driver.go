@@ -42,7 +42,7 @@ func (d driver) Output(cmd gofire.Command) (string, error) {
 			return "", err
 		}
 	}
-	if _, err := fmt.Fprintf(&buf, `m.doc = "%s\n%s";`, cmd.Doc, cmd.Definition); err != nil {
+	if _, err := fmt.Fprintf(&buf, `m.doc = %q;`, cmd.Doc+"\n"+cmd.Definition); err != nil {
 		return "", err
 	}
 	if _, err := buf.WriteString(
@@ -79,6 +79,10 @@ func (d *driver) Reset() error {
 	d.postParse.Reset()
 	d.inputList = nil
 	return nil
+}
+
+func (driver) Name() generators.DriverName {
+	return generators.DriverNameBubbleTea
 }
 
 func (d driver) Imports() []string {
@@ -182,19 +186,19 @@ func (d *driver) VisitArgument(a gofire.Argument) error {
 	if !ok {
 		return fmt.Errorf(
 			"driver %s: non primitive argument types are not supported, got an argument %s %s",
-			generators.DriverNameBubbleTea,
+			d.Name(),
 			p.Name,
 			a.Type.Type(),
 		)
 	}
 	if err := d.argument(p.Name, a.Index, tp); err != nil {
-		return fmt.Errorf("driver %s: argument %w", generators.DriverNameBubbleTea, err)
+		return fmt.Errorf("driver %s: argument %w", d.Name(), err)
 	}
 	return nil
 }
 
 func (d *driver) VisitFlag(f gofire.Flag, g *gofire.Group) error {
-	return fmt.Errorf("driver %s: doesn't support flags", generators.DriverNameBubbleTea)
+	return fmt.Errorf("driver %s: doesn't support flags", d.Name())
 }
 
 func (d *driver) argument(name string, index uint64, t gofire.TPrimitive) error {

@@ -94,7 +94,7 @@ func TestTokenize(t *testing.T) {
 	}
 	for tname, tcase := range table {
 		t.Run(tname, func(t *testing.T) {
-			args, flags, err := tokenize(tcase.tokens)
+			args, flags, err := Tokenize(tcase.tokens)
 			if fmt.Sprintf("%v", tcase.err) != fmt.Sprintf("%v", err) {
 				t.Fatalf("expected error message %q but got %q", tcase.err, err)
 			}
